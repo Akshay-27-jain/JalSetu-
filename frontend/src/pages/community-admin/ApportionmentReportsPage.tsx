@@ -276,25 +276,19 @@ export const ApportionmentReportsPage: React.FC = () => {
     return Math.round((meteredCount / displayApportionment.length) * 100);
   }, [displayApportionment]);
 
-  // Flat-by-Flat Water Consumption Bar Chart Data (compact, sorted, dynamic overuse)
+  // Flat-by-Flat Water Consumption Bar Chart Data (MUST SHOW ALL HOUSEHOLDS)
   const flatChartData = useMemo(() => {
-    // Filter to flats with actual consumption so 0 kL flats don't leave huge empty gaps
-    const flatsWithUsage = displayApportionment.filter((item) => item.totalConsumptionKl > 0);
-    const sourceFlats = flatsWithUsage.length > 0 ? flatsWithUsage : displayApportionment;
+    // Show all households in displayApportionment sorted naturally by Wing & Flat Number
+    const sorted = [...displayApportionment].sort((a, b) => {
+      return a.household.flatNumber.localeCompare(b.household.flatNumber, undefined, { numeric: true, sensitivity: 'base' });
+    });
 
-    // Sort by consumption descending so bars are grouped cleanly from highest to lowest
-    const sorted = [...sourceFlats].sort((a, b) => b.totalConsumptionKl - a.totalConsumptionKl);
-
-    // Calculate active benchmark: only flats with usage
-    const activeAvg = flatsWithUsage.length > 0 
-      ? flatsWithUsage.reduce((acc, curr) => acc + curr.totalConsumptionKl, 0) / flatsWithUsage.length 
-      : avgUsagePerFlat;
-    // Overuse threshold is 35% above the active flat benchmark for this specific period
-    const overuseThreshold = activeAvg > 0 ? activeAvg * 1.35 : 15;
+    const activeAvg = avgUsagePerFlat > 0 ? avgUsagePerFlat : 15;
+    const overuseThreshold = activeAvg * 1.35;
 
     return sorted.map((item) => {
       const vol = Number(item.totalConsumptionKl.toFixed(2));
-      const isOveruse = item.hasOveruse || (activeAvg > 0 && vol > overuseThreshold);
+      const isOveruse = item.hasOveruse || (vol > overuseThreshold && vol > 0);
       return {
         flat: `Flat ${item.household.flatNumber}`,
         flatRaw: item.household.flatNumber,
@@ -307,7 +301,7 @@ export const ApportionmentReportsPage: React.FC = () => {
     });
   }, [displayApportionment, avgUsagePerFlat]);
 
-  // Wing Apportionment Share Data (compact, active wings only)
+  // Wing Apportionment Share Data (shows all wings matching filter)
   const wingShareData = useMemo(() => {
     const wingMap = new Map<string, {
       name: string;
@@ -333,24 +327,21 @@ export const ApportionmentReportsPage: React.FC = () => {
     });
 
     const totalSocietyWater = totalWaterApportionedKl || 1;
-    const colors = ['#0284c7', '#06b6d4', '#10b981', '#6366f1', '#f59e0b', '#ec4899'];
+    const colors = ['#0284c7', '#06b6d4', '#10b981', '#6366f1', '#f59e0b', '#ec4899', '#8b5cf6', '#14b8a6'];
 
-    const allWings = Array.from(wingMap.values()).sort((a, b) => b.totalKl - a.totalKl);
-    // Filter to active wings with water volume so empty 0.00 kL wings don't stretch the card
-    const activeWings = allWings.filter((w) => w.totalKl > 0);
-    const wingsToDisplay = activeWings.length > 0 ? activeWings : allWings.slice(0, 4);
-
-    return wingsToDisplay.map((w, idx) => {
-      const pct = totalSocietyWater > 0 ? (w.totalKl / totalSocietyWater) * 100 : 0;
-      const sampleFlats = w.flats.slice(0, 2).join(', ') + (w.flats.length > 2 ? '...' : '');
-      return {
-        wing: w.name,
-        sampleFlats,
-        totalKl: Number(w.totalKl.toFixed(2)),
-        percentage: Number(pct.toFixed(1)),
-        color: colors[idx % colors.length],
-      };
-    });
+    return Array.from(wingMap.values())
+      .sort((a, b) => b.totalKl - a.totalKl)
+      .map((w, idx) => {
+        const pct = totalSocietyWater > 0 ? (w.totalKl / totalSocietyWater) * 100 : 0;
+        const sampleFlats = w.flats.slice(0, 2).join(', ') + (w.flats.length > 2 ? '...' : '');
+        return {
+          wing: w.name,
+          sampleFlats,
+          totalKl: Number(w.totalKl.toFixed(2)),
+          percentage: Number(pct.toFixed(1)),
+          color: colors[idx % colors.length],
+        };
+      });
   }, [displayApportionment, totalWaterApportionedKl]);
 
   // Paginated Rows
@@ -877,7 +868,7 @@ export const ApportionmentReportsPage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="space-y-3 pt-1">
+                <div className="space-y-3 pt-1 max-h-[290px] overflow-y-auto pr-1">
                   {wingShareData.map((wing) => (
                     <div key={wing.wing} className="space-y-1.5">
                       <div className="flex items-center justify-between text-xs font-semibold">

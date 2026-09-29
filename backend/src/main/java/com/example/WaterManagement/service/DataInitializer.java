@@ -561,8 +561,12 @@ public class DataInitializer implements CommandLineRunner {
         );
 
         for (Household h : households) {
-            if (h.getHasMeter() == null || !h.getHasMeter() || !demoMeteredFlats.contains(h.getFlatNumber())) {
-                continue; // Skip unmetered or non-demo households
+            if (h.getHasMeter() == null || !h.getHasMeter()) {
+                h.setHasMeter(true);
+                if (h.getMeterSerialNumber() == null || h.getMeterSerialNumber().isEmpty()) {
+                    h.setMeterSerialNumber("MTR-" + h.getFlatNumber().replace("-", "") + "-" + (1000 + h.getId() * 37));
+                }
+                householdRepository.save(h);
             }
 
             double baseMeter = 50.0 + (h.getId() * 12.0);

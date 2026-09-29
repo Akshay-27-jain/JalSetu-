@@ -4,7 +4,7 @@ import { ArrowRight, Droplets, CheckCircle2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { PwaInstallButton } from '../PwaInstallButton';
 import { gsap } from 'gsap';
-const HERO_BG_IMAGE = 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=2560&q=85';
+import landingBgImg from '../../assets/landing-bg.png';
 
 export function Hero() {
   const headlineRef = useRef<HTMLDivElement>(null);
@@ -33,10 +33,7 @@ export function Hero() {
       {/* Cinematic Water Background Photo */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <img
-          src={HERO_BG_IMAGE}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = '/images/water-bg.png';
-          }}
+          src={landingBgImg}
           alt="Water Background"
           className="h-full w-full object-cover scale-105"
         />
