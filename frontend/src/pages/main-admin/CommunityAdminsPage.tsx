@@ -35,6 +35,8 @@ import {
   Check,
   AlertCircle,
   UploadCloud,
+  Sliders,
+  Zap,
 } from 'lucide-react';
 import type {
   CommunityAdminDetail,
@@ -74,6 +76,16 @@ export const CommunityAdminsPage: React.FC = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [aiScanningId, setAiScanningId] = useState<string | null>(null);
+
+  // Re-run AI Analysis Options Modal State
+  const [isRerunModalOpen, setIsRerunModalOpen] = useState(false);
+  const [rerunTarget, setRerunTarget] = useState<PendingVerification | null>(null);
+  const [rerunScanMode, setRerunScanMode] = useState<'DEEP_FORENSIC' | 'STRICT_FRAUD' | 'FAST_HEURISTIC'>('DEEP_FORENSIC');
+  const [rerunCheckDuplicates, setRerunCheckDuplicates] = useState(true);
+  const [rerunCheckNameMatch, setRerunCheckNameMatch] = useState(true);
+  const [rerunCheckAddressMatch, setRerunCheckAddressMatch] = useState(true);
+  const [rerunCheckStampSeal, setRerunCheckStampSeal] = useState(true);
+  const [rerunCheckTampering, setRerunCheckTampering] = useState(true);
 
   // Selected Admin for Modals
   const [selectedAdmin, setSelectedAdmin] = useState<CommunityAdminDetail | null>(null);
@@ -253,17 +265,41 @@ export const CommunityAdminsPage: React.FC = () => {
     }
   };
 
-  // Trigger on-demand AI Verification Scan
-  const handleTriggerAiScan = async (v: PendingVerification) => {
-    const isResident = v.verificationType === 'RESIDENT';
-    const targetId = isResident ? (v.userId || 0) : (v.apartmentId || 0);
-    const scanKey = `${v.verificationType}_${targetId}`;
+  // Open AI Scan Options Configuration Popup Modal
+  const openRerunModal = (v: PendingVerification) => {
+    setRerunTarget(v);
+    setRerunScanMode('DEEP_FORENSIC');
+    setRerunCheckDuplicates(true);
+    setRerunCheckNameMatch(true);
+    setRerunCheckAddressMatch(true);
+    setRerunCheckStampSeal(true);
+    setRerunCheckTampering(true);
+    setIsRerunModalOpen(true);
+  };
+
+  // Trigger on-demand AI Verification Scan (Opens configuration popup)
+  const handleTriggerAiScan = (v: PendingVerification) => {
+    openRerunModal(v);
+  };
+
+  // Execute AI Scan with user-selected scan options
+  const handleExecuteRerunScan = async () => {
+    if (!rerunTarget) return;
+    const isResident = rerunTarget.verificationType === 'RESIDENT';
+    const targetId = isResident ? (rerunTarget.userId || 0) : (rerunTarget.apartmentId || 0);
+    const scanKey = `${rerunTarget.verificationType}_${targetId}`;
 
     try {
       setAiScanningId(scanKey);
       const updated = await mainAdminApi.triggerAiScan({
-        verificationType: v.verificationType || 'COMMUNITY_ADMIN',
+        verificationType: rerunTarget.verificationType || 'COMMUNITY_ADMIN',
         targetId,
+        scanMode: rerunScanMode,
+        checkDuplicates: rerunCheckDuplicates,
+        checkNameMatch: rerunCheckNameMatch,
+        checkAddressMatch: rerunCheckAddressMatch,
+        checkStampSeal: rerunCheckStampSeal,
+        checkTampering: rerunCheckTampering,
       });
 
       // Update local lists
@@ -274,14 +310,20 @@ export const CommunityAdminsPage: React.FC = () => {
         })
       );
 
+      // If the inspected verification modal is currently open for this target, update it live
       if (selectedVerification) {
-        setSelectedVerification((prev) => (prev ? { ...prev, ...updated } : prev));
+        const selKey = `${selectedVerification.verificationType}_${selectedVerification.verificationType === 'RESIDENT' ? selectedVerification.userId : selectedVerification.apartmentId}`;
+        if (selKey === scanKey) {
+          setSelectedVerification((prev) => (prev ? { ...prev, ...updated } : prev));
+        }
       }
 
       setSuccessMessage(
-        `AI Authenticity scan complete for ${v.adminFullName}: Score ${updated.aiVerificationScore || 0}% (${updated.aiVerificationStatus})`
+        `AI Authenticity scan complete for ${rerunTarget.adminFullName}: Score ${updated.aiVerificationScore || 0}% (${updated.aiVerificationStatus}) [Mode: ${rerunScanMode.replace('_', ' ')}]`
       );
       setTimeout(() => setSuccessMessage(null), 5000);
+      setIsRerunModalOpen(false);
+      setRerunTarget(null);
     } catch (err) {
       setError(extractErrorMessage(err));
     } finally {
@@ -801,6 +843,31 @@ export const CommunityAdminsPage: React.FC = () => {
       <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
         <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
         <span>{scoreVal}% • Authentic</span>
+      </span>
+    );
+  };
+
+  // Helper for rendering AI Risk Badges
+  const renderRiskBadge = (riskLevel?: string) => {
+    if (!riskLevel) return null;
+    const level = riskLevel.toUpperCase();
+    if (level === 'HIGH_RISK') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-rose-100 dark:bg-rose-950/60 px-1.5 py-0.5 text-[9px] font-extrabold text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
+          <ShieldAlert className="h-2.5 w-2.5 text-rose-600" /> High Risk
+        </span>
+      );
+    }
+    if (level === 'MODERATE_RISK') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 dark:bg-amber-950/60 px-1.5 py-0.5 text-[9px] font-extrabold text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900">
+          <AlertTriangle className="h-2.5 w-2.5 text-amber-600" /> Mod Risk
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 dark:bg-emerald-950/60 px-1.5 py-0.5 text-[9px] font-extrabold text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900">
+        <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" /> Low Risk
       </span>
     );
   };
@@ -1506,17 +1573,31 @@ export const CommunityAdminsPage: React.FC = () => {
 
                           {/* AI Authenticity & Fraud Risk */}
                           <td className="py-3.5 px-3">
-                            <div className="space-y-1">
-                              {renderAiScoreBadge(v.aiVerificationScore, v.aiVerificationStatus)}
-                              {v.aiVerificationSummary && (
-                                <p
-                                  className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[155px]"
-                                  title={v.aiVerificationSummary}
-                                >
-                                  {v.aiVerificationSummary}
-                                </p>
-                              )}
-                            </div>
+                            {(() => {
+                              let riskLevel = '';
+                              if (v.aiExtractedDataJson) {
+                                try {
+                                  const d = JSON.parse(v.aiExtractedDataJson);
+                                  riskLevel = d.riskLevel;
+                                } catch (e) {}
+                              }
+                              return (
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    {renderAiScoreBadge(v.aiVerificationScore, v.aiVerificationStatus)}
+                                    {riskLevel && renderRiskBadge(riskLevel)}
+                                  </div>
+                                  {v.aiVerificationSummary && (
+                                    <p
+                                      className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[170px]"
+                                      title={v.aiVerificationSummary}
+                                    >
+                                      {v.aiVerificationSummary}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </td>
 
                           {/* Submitted Date */}
@@ -2669,61 +2750,251 @@ export const CommunityAdminsPage: React.FC = () => {
             </div>
 
             {/* AI Authenticity & Fraud Risk Audit Panel */}
-            <div
-              className={`rounded-2xl border p-4 transition-all ${
-                selectedVerification.aiVerificationStatus === 'REJECTED_FAKE'
-                  ? 'border-rose-300 dark:border-rose-900 bg-rose-50/70 dark:bg-rose-950/40'
-                  : selectedVerification.aiVerificationStatus === 'SUSPICIOUS' ||
-                    (selectedVerification.aiVerificationScore || 0) < 50
-                  ? 'border-orange-300 dark:border-orange-900 bg-orange-50/70 dark:bg-orange-950/40'
-                  : (selectedVerification.aiVerificationScore || 0) < 80
-                  ? 'border-amber-300 dark:border-amber-900 bg-amber-50/70 dark:bg-amber-950/40'
-                  : 'border-emerald-300 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/40'
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/60 dark:border-slate-700/50">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white dark:bg-slate-900 shadow-xs">
-                    <Bot className="h-5 w-5 text-brand-600 dark:text-brand-400" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900 dark:text-white text-xs">
-                      AI Document Authenticity & Fraud Risk Score
-                    </h4>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Heuristic & computer vision multi-layer check (Watermarks, seal presence, format integrity)
-                    </p>
-                  </div>
-                </div>
+            {(() => {
+              let aiData: any = null;
+              if (selectedVerification.aiExtractedDataJson) {
+                try {
+                  aiData = JSON.parse(selectedVerification.aiExtractedDataJson);
+                } catch (e) {
+                  aiData = null;
+                }
+              }
 
-                <div>{renderAiScoreBadge(selectedVerification.aiVerificationScore, selectedVerification.aiVerificationStatus)}</div>
-              </div>
+              const scoreVal = selectedVerification.aiVerificationScore ?? 0;
+              const isHighRisk = selectedVerification.aiVerificationStatus === 'REJECTED_FAKE' || (aiData?.riskLevel === 'HIGH_RISK');
+              const isModRisk = selectedVerification.aiVerificationStatus === 'SUSPICIOUS' || scoreVal < 50 || (aiData?.riskLevel === 'MODERATE_RISK');
+              const isLowRisk = !isHighRisk && !isModRisk;
 
-              {/* Progress Bar & Details */}
-              <div className="mt-3 space-y-2">
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-slate-700 dark:text-slate-300">Authenticity Confidence:</span>
-                  <span className="font-mono text-sm">{selectedVerification.aiVerificationScore || 0}% / 100%</span>
+              return (
+                <div
+                  className={`rounded-2xl border p-4 transition-all shadow-sm ${
+                    isHighRisk
+                      ? 'border-rose-300 dark:border-rose-900 bg-rose-50/70 dark:bg-rose-950/40'
+                      : isModRisk
+                      ? 'border-amber-300 dark:border-amber-900 bg-amber-50/70 dark:bg-amber-950/40'
+                      : 'border-emerald-300 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/40'
+                  }`}
+                >
+                  {/* Top Bar with Title, Engine badge, Scan mode, Score & Action */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200/60 dark:border-slate-700/50">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-xs ${
+                        isHighRisk ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/60' :
+                        isModRisk ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/60' :
+                        'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/60'
+                      }`}>
+                        <Bot className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">
+                            AI Document Authenticity & Anti-Fraud Forensic Audit
+                          </h4>
+                          {aiData?.scanMode && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-900/50 px-2 py-0.5 text-[10px] font-extrabold text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                              <Zap className="h-2.5 w-2.5 text-purple-600" />
+                              {aiData.scanMode.replace('_', ' ')}
+                            </span>
+                          )}
+                          {aiData?.riskLevel && (
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold border ${
+                              aiData.riskLevel === 'HIGH_RISK'
+                                ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-900/50 dark:text-rose-200'
+                                : aiData.riskLevel === 'MODERATE_RISK'
+                                ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200'
+                                : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/50 dark:text-emerald-200'
+                            }`}>
+                              {aiData.riskLevel === 'HIGH_RISK' ? <ShieldAlert className="h-2.5 w-2.5" /> :
+                               aiData.riskLevel === 'MODERATE_RISK' ? <AlertTriangle className="h-2.5 w-2.5" /> :
+                               <CheckCircle2 className="h-2.5 w-2.5" />}
+                              {aiData.riskLevel.replace('_', ' ')}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          {aiData?.scanEngine || 'JalSetu Forensic Vision AI v2.4 + Cryptographic Verification'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {renderAiScoreBadge(selectedVerification.aiVerificationScore, selectedVerification.aiVerificationStatus)}
+                      <button
+                        type="button"
+                        onClick={() => openRerunModal(selectedVerification)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-purple-300 dark:border-purple-700 bg-purple-100/70 hover:bg-purple-200/80 dark:bg-purple-900/40 dark:hover:bg-purple-900/70 px-2.5 py-1 text-xs font-bold text-purple-700 dark:text-purple-300 transition-all cursor-pointer"
+                        title="Re-configure scan and run again"
+                      >
+                        <Sliders className="h-3 w-3" />
+                        <span>Re-run Options</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confidence Progress Bar */}
+                  <div className="mt-3 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span className="text-slate-700 dark:text-slate-300">Composite Authenticity Confidence:</span>
+                      <span className="font-mono text-sm font-extrabold">{scoreVal}% / 100%</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700/60">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          scoreVal >= 80
+                            ? 'bg-emerald-500'
+                            : scoreVal >= 50
+                            ? 'bg-amber-500'
+                            : 'bg-rose-500'
+                        }`}
+                        style={{ width: `${Math.min(scoreVal, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Executive Actionable Recommendation Banner */}
+                  {(aiData?.recommendation || selectedVerification.aiVerificationSummary) && (
+                    <div className={`mt-3 rounded-xl p-3 border text-xs font-medium flex items-start gap-2.5 ${
+                      isHighRisk
+                        ? 'bg-rose-100/80 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200'
+                        : isModRisk
+                        ? 'bg-amber-100/80 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200'
+                        : 'bg-emerald-100/80 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200'
+                    }`}>
+                      {isHighRisk ? (
+                        <ShieldAlert className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
+                      ) : isModRisk ? (
+                        <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+                      )}
+                      <div>
+                        <span className="font-bold uppercase tracking-wider text-[10px] block opacity-80 mb-0.5">
+                          Executive AI Recommendation
+                        </span>
+                        <span>{aiData?.recommendation || selectedVerification.aiVerificationSummary}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Critical Red Flags Box (if any) */}
+                  {aiData?.redFlags && aiData.redFlags.length > 0 && (
+                    <div className="mt-3 rounded-xl border border-rose-300 dark:border-rose-900 bg-rose-100/70 dark:bg-rose-950/60 p-3 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-rose-700 dark:text-rose-300">
+                        <AlertCircle className="h-4 w-4" />
+                        <span>Critical Fraud & Tamper Alerts ({aiData.redFlags.length})</span>
+                      </div>
+                      <div className="space-y-1 pl-5">
+                        {aiData.redFlags.map((flag: string, idx: number) => (
+                          <p key={idx} className="text-xs text-rose-800 dark:text-rose-200 font-medium">
+                            • {flag}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 6-Point Verification Matrix (Grid) */}
+                  {aiData?.checklist && aiData.checklist.length > 0 && (
+                    <div className="mt-3.5 space-y-2">
+                      <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                        6-Point Forensic Verification Matrix
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {aiData.checklist.map((item: any) => {
+                          const isPass = item.status === 'PASS';
+                          return (
+                            <div
+                              key={item.id}
+                              className={`rounded-xl border p-2.5 flex items-start gap-2.5 transition-all ${
+                                isPass
+                                  ? 'bg-white/80 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800'
+                                  : 'bg-rose-50/80 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900'
+                              }`}
+                            >
+                              <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full mt-0.5 ${
+                                isPass ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400' : 'bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-400'
+                              }`}>
+                                {isPass ? <Check className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                              </div>
+                              <div className="space-y-0.5 min-w-0">
+                                <div className="flex items-center justify-between gap-1">
+                                  <h5 className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate">
+                                    {item.title}
+                                  </h5>
+                                  <span className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded ${
+                                    isPass ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
+                                  }`}>
+                                    {item.status}
+                                  </span>
+                                </div>
+                                <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-tight">
+                                  {item.details}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Per-Document Breakdown (3 Documents) */}
+                  {aiData?.docBreakdown && aiData.docBreakdown.length > 0 && (
+                    <div className="mt-3.5 space-y-2">
+                      <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                        Per-Document Authenticity Breakdown
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        {aiData.docBreakdown.map((doc: any) => {
+                          const isPass = doc.status === 'PASS';
+                          return (
+                            <div
+                              key={doc.docNumber}
+                              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 p-2.5 space-y-1.5 shadow-2xs"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-slate-400">Doc {doc.docNumber}</span>
+                                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${
+                                  isPass ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
+                                }`}>
+                                  {doc.score}% • {doc.status}
+                                </span>
+                              </div>
+                              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-1">
+                                {doc.docName}
+                              </p>
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
+                                {doc.notes}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Audit Logs Trail */}
+                  {aiData?.auditLogs && aiData.auditLogs.length > 0 && (
+                    <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-slate-700/50">
+                      <details className="group cursor-pointer">
+                        <summary className="text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-between">
+                          <span>Evidence Trail & Validation Logs ({aiData.auditLogs.length} events)</span>
+                          <span className="text-[10px] text-brand-600 dark:text-brand-400 group-open:rotate-180 transition-transform">▼</span>
+                        </summary>
+                        <div className="mt-2 space-y-1 pl-2 font-mono text-[10px] text-slate-600 dark:text-slate-400 bg-slate-50/80 dark:bg-slate-900/80 p-2.5 rounded-lg border border-slate-200/50 dark:border-slate-800">
+                          {aiData.auditLogs.map((log: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-1.5">
+                              <span className="text-emerald-500">✔</span>
+                              <span>{log}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    </div>
+                  )}
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      (selectedVerification.aiVerificationScore || 0) >= 80
-                        ? 'bg-emerald-500'
-                        : (selectedVerification.aiVerificationScore || 0) >= 50
-                        ? 'bg-amber-500'
-                        : 'bg-rose-500'
-                    }`}
-                    style={{ width: `${Math.min(selectedVerification.aiVerificationScore || 0, 100)}%` }}
-                  />
-                </div>
-                {selectedVerification.aiVerificationSummary && (
-                  <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed pt-1">
-                    🔍 <strong>Audit Findings:</strong> {selectedVerification.aiVerificationSummary}
-                  </p>
-                )}
-              </div>
-            </div>
+              );
+            })()}
 
             {/* 3-Document Selector Tabs */}
             <div className="space-y-2">
@@ -2877,6 +3148,244 @@ export const CommunityAdminsPage: React.FC = () => {
                   <span>Approve & Activate Account</span>
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ---------------- 5.5 RE-RUN AI ANALYSIS CONFIGURATION MODAL ---------------- */}
+      <Modal
+        isOpen={isRerunModalOpen}
+        onClose={() => {
+          if (!aiScanningId) {
+            setIsRerunModalOpen(false);
+            setRerunTarget(null);
+          }
+        }}
+        title="Re-run AI Document Authenticity & Fraud Analysis"
+        subtitle="Select forensic engine depth and toggle multi-factor verification checks before launching scan"
+        maxWidth="max-w-2xl"
+      >
+        {rerunTarget && (
+          <div className="space-y-5">
+            {/* Target Information Card */}
+            <div className="rounded-xl border border-purple-200 dark:border-purple-900 bg-purple-50/60 dark:bg-purple-950/40 p-3.5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-600 text-white shadow-xs">
+                  <Bot className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-extrabold text-purple-900 dark:text-purple-200">
+                      {rerunTarget.verificationType === 'RESIDENT' ? 'Resident Verification' : 'Community Admin Verification'}
+                    </span>
+                    <span className="rounded-full bg-purple-200/70 dark:bg-purple-800/60 px-2 py-0.5 text-[10px] font-bold text-purple-800 dark:text-purple-300">
+                      Target #{rerunTarget.verificationType === 'RESIDENT' ? rerunTarget.userId : rerunTarget.apartmentId}
+                    </span>
+                  </div>
+                  <p className="text-sm font-bold text-slate-800 dark:text-white mt-0.5">
+                    {rerunTarget.adminFullName}
+                    {rerunTarget.flatNumber && <span className="font-normal text-slate-500"> • Flat {rerunTarget.flatNumber}</span>}
+                    <span className="font-normal text-slate-500"> • {rerunTarget.apartmentName}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-right hidden sm:block">
+                <span className="text-[10px] font-bold text-slate-400 block uppercase">Current Score</span>
+                <span className="text-xs font-extrabold font-mono text-purple-700 dark:text-purple-300">
+                  {rerunTarget.aiVerificationScore || 0}% ({rerunTarget.aiVerificationStatus || 'PENDING'})
+                </span>
+              </div>
+            </div>
+
+            {/* Scan Mode Selection */}
+            <div>
+              <label className="block text-xs font-extrabold text-slate-700 dark:text-slate-300 mb-2">
+                1. Select AI Forensic Engine Mode
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {/* Deep Forensic */}
+                <button
+                  type="button"
+                  onClick={() => setRerunScanMode('DEEP_FORENSIC')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    rerunScanMode === 'DEEP_FORENSIC'
+                      ? 'border-purple-500 bg-purple-50/80 dark:bg-purple-950/50 ring-2 ring-purple-500/20 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-purple-700 dark:text-purple-300 mb-1">
+                    <Zap className="h-4 w-4 text-purple-600" />
+                    <span>Deep Forensic</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                    Full multi-layer neural scan. Cryptographic hashing, pixel analysis, stamp & name cross-matching.
+                  </p>
+                </button>
+
+                {/* Strict Anti-Fraud */}
+                <button
+                  type="button"
+                  onClick={() => setRerunScanMode('STRICT_FRAUD')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    rerunScanMode === 'STRICT_FRAUD'
+                      ? 'border-rose-500 bg-rose-50/80 dark:bg-rose-950/50 ring-2 ring-rose-500/20 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 mb-1">
+                    <ShieldAlert className="h-4 w-4 text-rose-600" />
+                    <span>Strict Anti-Fraud</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                    Elevated fraud threshold. Flags minor discrepancies in signatures, duplicate hashes, or demo files.
+                  </p>
+                </button>
+
+                {/* Fast Heuristic */}
+                <button
+                  type="button"
+                  onClick={() => setRerunScanMode('FAST_HEURISTIC')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    rerunScanMode === 'FAST_HEURISTIC'
+                      ? 'border-brand-500 bg-brand-50/80 dark:bg-brand-950/50 ring-2 ring-brand-500/20 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-700 dark:text-brand-300 mb-1">
+                    <Sparkles className="h-4 w-4 text-brand-600" />
+                    <span>Fast Heuristic</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+                    Rapid checks on structural format, file headers, dimensions, and applicant identity matching.
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            {/* Configurable Verification Checkpoints */}
+            <div className="space-y-2">
+              <label className="block text-xs font-extrabold text-slate-700 dark:text-slate-300 mb-1">
+                2. Configure Verification Checkpoints
+              </label>
+
+              <div className="space-y-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-3">
+                {/* Duplicate Detection */}
+                <label className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rerunCheckDuplicates}
+                    onChange={(e) => setRerunCheckDuplicates(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-white block">
+                      Cross-Document Duplicate & Anti-Collision Check
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight block">
+                      Detects if identical files were uploaded to bypass the 3 distinct document requirement.
+                    </span>
+                  </div>
+                </label>
+
+                {/* Identity Name Match */}
+                <label className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rerunCheckNameMatch}
+                    onChange={(e) => setRerunCheckNameMatch(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-white block">
+                      Applicant Identity & Name Cross-Match
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight block">
+                      Cross-matches applicant registered name against Government Photo ID text records.
+                    </span>
+                  </div>
+                </label>
+
+                {/* Address Consistency */}
+                <label className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rerunCheckAddressMatch}
+                    onChange={(e) => setRerunCheckAddressMatch(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-white block">
+                      Property & Community Address Consistency
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight block">
+                      Verifies apartment/society naming, unit flat numbers, and municipal registry details.
+                    </span>
+                  </div>
+                </label>
+
+                {/* Seals & Stamps */}
+                <label className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rerunCheckStampSeal}
+                    onChange={(e) => setRerunCheckStampSeal(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-white block">
+                      Official Stamps, Emblems & Signature Verification
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight block">
+                      Scans for notary stamps, municipal emblems, and authorized signatures on legal deeds.
+                    </span>
+                  </div>
+                </label>
+
+                {/* Tampering Integrity */}
+                <label className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rerunCheckTampering}
+                    onChange={(e) => setRerunCheckTampering(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-white block">
+                      Digital Forensic Integrity & Anti-Tampering
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight block">
+                      Inspects PDF stream structures, image compression artifacts, and placeholder demo files.
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRerunModalOpen(false);
+                  setRerunTarget(null);
+                }}
+                disabled={Boolean(aiScanningId)}
+                className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExecuteRerunScan}
+                disabled={Boolean(aiScanningId)}
+                className="flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-purple-600/25 active:scale-98 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Sparkles className={`h-4 w-4 ${aiScanningId ? 'animate-spin' : ''}`} />
+                <span>{aiScanningId ? 'Analyzing Documents...' : 'Start AI Analysis'}</span>
+              </button>
             </div>
           </div>
         )}

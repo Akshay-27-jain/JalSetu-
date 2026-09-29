@@ -221,7 +221,7 @@ public class MainAdminController {
             @RequestBody ApartmentDtos.ReviewVerificationRequest request) {
         String type = request.getVerificationType() != null ? request.getVerificationType() : "COMMUNITY_ADMIN";
         Long targetId = request.getTargetId();
-        return ResponseEntity.ok(mainAdminService.triggerAiDocumentScan(type, targetId));
+        return ResponseEntity.ok(mainAdminService.triggerAiDocumentScan(type, targetId, request));
     }
 
     @PostMapping("/verifications/{apartmentId}/approve")

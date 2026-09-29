@@ -1066,6 +1066,18 @@ public class MainAdminService {
 
     @Transactional
     public ApartmentDtos.PendingVerificationResponse triggerAiDocumentScan(String verificationType, Long targetId) {
+        return triggerAiDocumentScan(verificationType, targetId, null);
+    }
+
+    @Transactional
+    public ApartmentDtos.PendingVerificationResponse triggerAiDocumentScan(String verificationType, Long targetId, ApartmentDtos.ReviewVerificationRequest request) {
+        String scanMode = (request != null && request.getScanMode() != null) ? request.getScanMode() : "DEEP_FORENSIC";
+        Boolean checkNameMatch = request != null ? request.getCheckNameMatch() : true;
+        Boolean checkAddressMatch = request != null ? request.getCheckAddressMatch() : true;
+        Boolean checkStampSeal = request != null ? request.getCheckStampSeal() : true;
+        Boolean checkTampering = request != null ? request.getCheckTampering() : true;
+        Boolean checkDuplicates = request != null ? request.getCheckDuplicates() : true;
+
         if ("RESIDENT".equalsIgnoreCase(verificationType)) {
             User resident = userRepository.findById(targetId)
                     .orElseThrow(() -> new ResourceNotFoundException("Resident user not found with ID: " + targetId));
@@ -1079,7 +1091,8 @@ public class MainAdminService {
                     h != null ? h.getFlatNumber() : "FLAT",
                     resident.getDoc1Type(), resident.getDoc1FileName(), resident.getDoc1Url(),
                     resident.getDoc2Type(), resident.getDoc2FileName(), resident.getDoc2Url(),
-                    resident.getDoc3Type(), resident.getDoc3FileName(), resident.getDoc3Url()
+                    resident.getDoc3Type(), resident.getDoc3FileName(), resident.getDoc3Url(),
+                    scanMode, checkNameMatch, checkAddressMatch, checkStampSeal, checkTampering, checkDuplicates
             );
 
             String aiJson = null;
@@ -1135,7 +1148,8 @@ public class MainAdminService {
                     "ADMIN",
                     apt.getDoc1Type(), apt.getDoc1FileName(), apt.getDoc1Url(),
                     apt.getDoc2Type(), apt.getDoc2FileName(), apt.getDoc2Url(),
-                    apt.getDoc3Type(), apt.getDoc3FileName(), apt.getDoc3Url()
+                    apt.getDoc3Type(), apt.getDoc3FileName(), apt.getDoc3Url(),
+                    scanMode, checkNameMatch, checkAddressMatch, checkStampSeal, checkTampering, checkDuplicates
             );
 
             String aiJson = null;

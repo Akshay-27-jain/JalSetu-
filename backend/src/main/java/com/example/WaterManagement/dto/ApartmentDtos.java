@@ -989,6 +989,13 @@ public class ApartmentDtos {
         private String verificationType; // "COMMUNITY_ADMIN" or "RESIDENT"
         private Long targetId; // apartmentId or userId
 
+        private String scanMode; // "DEEP_FORENSIC", "FAST_HEURISTIC", "STRICT_FRAUD"
+        private Boolean checkNameMatch;
+        private Boolean checkAddressMatch;
+        private Boolean checkStampSeal;
+        private Boolean checkTampering;
+        private Boolean checkDuplicates;
+
         public ReviewVerificationRequest() {}
 
         public ReviewVerificationRequest(String action, String notes, String verificationType, Long targetId) {
@@ -1006,5 +1013,17 @@ public class ApartmentDtos {
         public void setVerificationType(String verificationType) { this.verificationType = verificationType; }
         public Long getTargetId() { return targetId; }
         public void setTargetId(Long targetId) { this.targetId = targetId; }
+        public String getScanMode() { return scanMode; }
+        public void setScanMode(String scanMode) { this.scanMode = scanMode; }
+        public Boolean getCheckNameMatch() { return checkNameMatch; }
+        public void setCheckNameMatch(Boolean checkNameMatch) { this.checkNameMatch = checkNameMatch; }
+        public Boolean getCheckAddressMatch() { return checkAddressMatch; }
+        public void setCheckAddressMatch(Boolean checkAddressMatch) { this.checkAddressMatch = checkAddressMatch; }
+        public Boolean getCheckStampSeal() { return checkStampSeal; }
+        public void setCheckStampSeal(Boolean checkStampSeal) { this.checkStampSeal = checkStampSeal; }
+        public Boolean getCheckTampering() { return checkTampering; }
+        public void setCheckTampering(Boolean checkTampering) { this.checkTampering = checkTampering; }
+        public Boolean getCheckDuplicates() { return checkDuplicates; }
+        public void setCheckDuplicates(Boolean checkDuplicates) { this.checkDuplicates = checkDuplicates; }
     }
 }

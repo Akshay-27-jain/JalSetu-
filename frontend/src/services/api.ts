@@ -334,6 +334,12 @@ export const mainAdminApi = {
   triggerAiScan: async (data: {
     verificationType: 'COMMUNITY_ADMIN' | 'RESIDENT';
     targetId: number;
+    scanMode?: 'DEEP_FORENSIC' | 'STRICT_FRAUD' | 'FAST_HEURISTIC';
+    checkNameMatch?: boolean;
+    checkAddressMatch?: boolean;
+    checkStampSeal?: boolean;
+    checkTampering?: boolean;
+    checkDuplicates?: boolean;
   }): Promise<PendingVerification> => {
     const res = await api.post<PendingVerification>('/main-admin/verifications/ai-scan', data);
     return res.data;
