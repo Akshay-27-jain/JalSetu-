@@ -261,6 +261,19 @@ export const LoginPage: React.FC = () => {
           )}
         </button>
 
+        {/* Privacy & Terms consent notice */}
+        <p className="text-center text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+          By signing in, you agree to our{' '}
+          <Link to="/terms" className="font-semibold text-brand-500 hover:text-brand-600 dark:text-brand-400 underline underline-offset-2">
+            Terms of Service
+          </Link>{' '}
+          and{' '}
+          <Link to="/privacy" className="font-semibold text-brand-500 hover:text-brand-600 dark:text-brand-400 underline underline-offset-2">
+            Privacy Policy
+          </Link>
+          .
+        </p>
+
         {/* OAuth 2.0 Divider */}
         <div className="relative my-4">
           <div className="absolute inset-0 flex items-center">

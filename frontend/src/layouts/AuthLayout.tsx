@@ -83,36 +83,38 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         />
 
         {/* Content */}
-        <div className="relative flex h-full min-h-screen flex-col justify-between p-8 sm:p-10 lg:p-12 xl:p-16 text-white z-10 w-full text-left">
-          <Link to="/" className="inline-flex w-fit" aria-label="JalSetu home">
+        <div className="relative flex h-full min-h-screen flex-col p-8 sm:p-10 lg:p-12 xl:p-14 text-white z-10 w-full text-left">
+          <Link to="/" className="inline-flex w-fit shrink-0" aria-label="JalSetu home">
             <Logo size="lg" dark />
           </Link>
 
-          {/* Centerpiece */}
-          <div
-            className="my-auto py-8 max-w-lg text-left"
-            style={{
-              transform: `translate(${mouse.x * 0.35}px, ${mouse.y * 0.35}px)`,
-              transition: 'transform 0.3s ease-out',
-            }}
-          >
-            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-glow">
-              <Waves className="h-7 w-7 text-aqua-300 animate-pulse" />
+          {/* Centerpiece — flex-1 + flex + items-center centers it in remaining vertical space */}
+          <div className="flex flex-1 items-center">
+            <div
+              className="max-w-lg text-left"
+              style={{
+                transform: `translate(${mouse.x * 0.35}px, ${mouse.y * 0.35}px)`,
+                transition: 'transform 0.3s ease-out',
+              }}
+            >
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-glow">
+                <Waves className="h-7 w-7 text-aqua-300 animate-pulse" />
+              </div>
+
+              <h2 className="font-display text-3xl font-extrabold leading-tight text-white drop-shadow-md xl:text-4xl text-left">
+                Smart Water Management for{' '}
+                <span className="bg-gradient-to-r from-aqua-300 via-teal-200 to-brand-300 bg-clip-text text-transparent">
+                  Modern Communities.
+                </span>
+              </h2>
+
+              <p className="mt-4 text-sm xl:text-base leading-relaxed text-brand-100/85 drop-shadow-sm text-left">
+                JalSetu empowers residential societies with transparent digital meter tracking, automated tiered billing, and proactive leak protection.
+              </p>
             </div>
-
-            <h2 className="font-display text-3xl font-extrabold leading-tight text-white drop-shadow-md xl:text-4xl text-left">
-              Smart Water Management for{' '}
-              <span className="bg-gradient-to-r from-aqua-300 via-teal-200 to-brand-300 bg-clip-text text-transparent">
-                Modern Communities.
-              </span>
-            </h2>
-
-            <p className="mt-4 text-sm xl:text-base leading-relaxed text-brand-100/85 drop-shadow-sm text-left">
-              JalSetu empowers residential societies with transparent digital meter tracking, automated tiered billing, and proactive leak protection.
-            </p>
           </div>
 
-          <div className="flex items-center justify-between border-t border-white/10 pt-4 w-full">
+          <div className="shrink-0 flex items-center justify-between border-t border-white/10 pt-4 w-full">
             <p className="text-xs text-brand-200/60">© 2026 JalSetu. All rights reserved.</p>
             <Link
               to="/"
