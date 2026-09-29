@@ -276,11 +276,25 @@ export const ApportionmentReportsPage: React.FC = () => {
     return Math.round((meteredCount / displayApportionment.length) * 100);
   }, [displayApportionment]);
 
-  // Flat-by-Flat Water Consumption Bar Chart Data (matching screenshot)
+  // Flat-by-Flat Water Consumption Bar Chart Data (compact, sorted, dynamic overuse)
   const flatChartData = useMemo(() => {
-    return displayApportionment.map((item) => {
+    // Filter to flats with actual consumption so 0 kL flats don't leave huge empty gaps
+    const flatsWithUsage = displayApportionment.filter((item) => item.totalConsumptionKl > 0);
+    const sourceFlats = flatsWithUsage.length > 0 ? flatsWithUsage : displayApportionment;
+
+    // Sort by consumption descending so bars are grouped cleanly from highest to lowest
+    const sorted = [...sourceFlats].sort((a, b) => b.totalConsumptionKl - a.totalConsumptionKl);
+
+    // Calculate active benchmark: only flats with usage
+    const activeAvg = flatsWithUsage.length > 0 
+      ? flatsWithUsage.reduce((acc, curr) => acc + curr.totalConsumptionKl, 0) / flatsWithUsage.length 
+      : avgUsagePerFlat;
+    // Overuse threshold is 35% above the active flat benchmark for this specific period
+    const overuseThreshold = activeAvg > 0 ? activeAvg * 1.35 : 15;
+
+    return sorted.map((item) => {
       const vol = Number(item.totalConsumptionKl.toFixed(2));
-      const isOveruse = item.hasOveruse || (avgUsagePerFlat > 0 && vol > avgUsagePerFlat * 1.35) || vol > 14;
+      const isOveruse = item.hasOveruse || (activeAvg > 0 && vol > overuseThreshold);
       return {
         flat: `Flat ${item.household.flatNumber}`,
         flatRaw: item.household.flatNumber,
@@ -293,7 +307,7 @@ export const ApportionmentReportsPage: React.FC = () => {
     });
   }, [displayApportionment, avgUsagePerFlat]);
 
-  // Wing Apportionment Share Data (matching screenshot)
+  // Wing Apportionment Share Data (compact, active wings only)
   const wingShareData = useMemo(() => {
     const wingMap = new Map<string, {
       name: string;
@@ -321,19 +335,22 @@ export const ApportionmentReportsPage: React.FC = () => {
     const totalSocietyWater = totalWaterApportionedKl || 1;
     const colors = ['#0284c7', '#06b6d4', '#10b981', '#6366f1', '#f59e0b', '#ec4899'];
 
-    return Array.from(wingMap.values())
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((w, idx) => {
-        const pct = totalSocietyWater > 0 ? (w.totalKl / totalSocietyWater) * 100 : 0;
-        const sampleFlats = w.flats.slice(0, 3).join(', ') + (w.flats.length > 3 ? '...' : '');
-        return {
-          wing: w.name,
-          sampleFlats,
-          totalKl: Number(w.totalKl.toFixed(2)),
-          percentage: Number(pct.toFixed(1)),
-          color: colors[idx % colors.length],
-        };
-      });
+    const allWings = Array.from(wingMap.values()).sort((a, b) => b.totalKl - a.totalKl);
+    // Filter to active wings with water volume so empty 0.00 kL wings don't stretch the card
+    const activeWings = allWings.filter((w) => w.totalKl > 0);
+    const wingsToDisplay = activeWings.length > 0 ? activeWings : allWings.slice(0, 4);
+
+    return wingsToDisplay.map((w, idx) => {
+      const pct = totalSocietyWater > 0 ? (w.totalKl / totalSocietyWater) * 100 : 0;
+      const sampleFlats = w.flats.slice(0, 2).join(', ') + (w.flats.length > 2 ? '...' : '');
+      return {
+        wing: w.name,
+        sampleFlats,
+        totalKl: Number(w.totalKl.toFixed(2)),
+        percentage: Number(pct.toFixed(1)),
+        color: colors[idx % colors.length],
+      };
+    });
   }, [displayApportionment, totalWaterApportionedKl]);
 
   // Paginated Rows
@@ -796,12 +813,12 @@ export const ApportionmentReportsPage: React.FC = () => {
               ) : (
                 <div className="h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={flatChartData} margin={{ top: 15, right: 15, left: -15, bottom: 25 }}>
+                    <BarChart data={flatChartData} barCategoryGap="20%" margin={{ top: 15, right: 15, left: -15, bottom: 25 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.6} />
                       <XAxis
                         dataKey="flat"
-                        angle={flatChartData.length > 5 ? -25 : 0}
-                        textAnchor={flatChartData.length > 5 ? "end" : "middle"}
+                        angle={flatChartData.length > 4 ? -25 : 0}
+                        textAnchor={flatChartData.length > 4 ? "end" : "middle"}
                         interval={0}
                         tick={{ fontSize: 11, fill: '#64748b' }}
                         axisLine={false}
@@ -836,7 +853,7 @@ export const ApportionmentReportsPage: React.FC = () => {
                           return null;
                         }}
                       />
-                      <Bar dataKey="consumption" radius={[6, 6, 0, 0]}>
+                      <Bar dataKey="consumption" maxBarSize={44} radius={[6, 6, 0, 0]}>
                         {flatChartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.isOveruse ? '#ef4444' : '#0284c7'} />
                         ))}
@@ -848,7 +865,7 @@ export const ApportionmentReportsPage: React.FC = () => {
             </div>
 
             {/* Right: Wing Apportionment Share (4 cols) */}
-            <div className="lg:col-span-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#131B2E] p-6 shadow-sm flex flex-col justify-between">
+            <div className="lg:col-span-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#131B2E] p-5 sm:p-6 shadow-sm flex flex-col justify-between">
               <div>
                 <div className="mb-4">
                   <h3 className="font-display text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -860,7 +877,7 @@ export const ApportionmentReportsPage: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="space-y-4 pt-1">
+                <div className="space-y-3 pt-1">
                   {wingShareData.map((wing) => (
                     <div key={wing.wing} className="space-y-1.5">
                       <div className="flex items-center justify-between text-xs font-semibold">

@@ -4,10 +4,7 @@ import { ArrowRight, Droplets, CheckCircle2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { PwaInstallButton } from '../PwaInstallButton';
 import { gsap } from 'gsap';
-import { VideoBackground } from './VideoBackground';
-
-const VIDEO_URL = 'https://videos.pexels.com/video-files/2776522/2776522-hd_1920_1080_30fps.mp4';
-const POSTER_URL = 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=1920&q=80';
+const HERO_BG_IMAGE = 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=2560&q=85';
 
 export function Hero() {
   const headlineRef = useRef<HTMLDivElement>(null);
@@ -33,8 +30,21 @@ export function Hero() {
       id="home"
       className="relative flex h-[100dvh] min-h-[640px] w-full flex-col justify-center items-center overflow-hidden px-4"
     >
-      {/* Cinematic Looping Water Background Video */}
-      <VideoBackground videoUrl={VIDEO_URL} posterUrl={POSTER_URL} />
+      {/* Cinematic Water Background Photo */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+        <img
+          src={HERO_BG_IMAGE}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = '/images/water-bg.png';
+          }}
+          alt="Water Background"
+          className="h-full w-full object-cover scale-105"
+        />
+        {/* Cinematic dark tint with brand vignette for maximum readability */}
+        <div className="absolute inset-0 bg-slate-950/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/85 via-slate-950/65 to-slate-950/90" />
+        <div className="absolute inset-0 bg-radial-at-c from-transparent via-slate-950/40 to-slate-950/80" />
+      </div>
 
       {/* Content Container — Centered vertically within full viewport */}
       <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center text-center px-4 sm:px-6 lg:px-8 mt-10 sm:mt-12">
