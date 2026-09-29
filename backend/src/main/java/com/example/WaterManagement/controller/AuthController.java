@@ -1,8 +1,10 @@
 package com.example.WaterManagement.controller;
 
+import com.example.WaterManagement.dto.ApartmentDtos;
 import com.example.WaterManagement.dto.AuthDtos;
 import com.example.WaterManagement.security.CustomUserPrincipal;
 import com.example.WaterManagement.service.AuthService;
+import com.example.WaterManagement.service.MainAdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,9 +20,17 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final MainAdminService mainAdminService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, MainAdminService mainAdminService) {
         this.authService = authService;
+        this.mainAdminService = mainAdminService;
+    }
+
+    @GetMapping("/platform-stats")
+    @Operation(summary = "Get Public Platform Stats", description = "Retrieves live platform metrics from database for landing page animation counter")
+    public ResponseEntity<ApartmentDtos.MainAdminStatsResponse> getPublicPlatformStats() {
+        return ResponseEntity.ok(mainAdminService.getStats());
     }
 
     @PostMapping("/login")

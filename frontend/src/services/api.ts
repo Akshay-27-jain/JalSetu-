@@ -190,6 +190,10 @@ export const authApi = {
     const res = await api.post<{ message: string; success: boolean }>('/auth/change-password', data);
     return res.data;
   },
+  getPlatformStats: async (): Promise<MainAdminStats> => {
+    const res = await api.get<MainAdminStats>('/auth/platform-stats');
+    return res.data;
+  },
 };
 
 // Main Admin
