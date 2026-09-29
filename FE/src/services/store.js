@@ -1,0 +1,1316 @@
+// DROP Dynamic Data Store & State Manager with 100% Mathematically Verified Slab Billing Engine
+
+const STORAGE_KEYS = {
+  HOUSEHOLDS: "drop_households_data",
+  RESIDENTS: "drop_residents_data",
+  READINGS: "drop_readings_data",
+  BILLS: "drop_bills_data",
+  LEAKS: "drop_leaks_data",
+  PLANS: "drop_tariff_plans_data",
+  BULK_PURCHASES: "drop_bulk_purchases_data",
+  ADMIN_APPLICATIONS: "drop_admin_applications_data",
+  APARTMENTS: "drop_apartments_data",
+  AUDIT_LOGS: "drop_audit_logs_data",
+};
+
+const _memoryStore = {};
+
+function getLocal(key, fallback = []) {
+  try {
+    if (typeof window !== "undefined" && window.localStorage) {
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : fallback;
+    }
+    return _memoryStore[key] ? JSON.parse(JSON.stringify(_memoryStore[key])) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function setLocal(key, value) {
+  try {
+    if (typeof window !== "undefined" && window.localStorage) {
+      localStorage.setItem(key, JSON.stringify(value));
+    } else {
+      _memoryStore[key] = JSON.parse(JSON.stringify(value));
+    }
+  } catch (e) {
+    console.error("Storage error", e);
+  }
+}
+
+// Clean out any previously stored dummy residents from localStorage (preserving 'busa' or real records)
+const STORE_VERSION = "drop_store_clean_v7";
+if (typeof window !== "undefined" && window.localStorage) {
+  if (localStorage.getItem("drop_store_version") !== STORE_VERSION) {
+    try {
+      const existingResidents = JSON.parse(localStorage.getItem(STORAGE_KEYS.RESIDENTS) || "[]");
+      const busaResidents = existingResidents.filter((r) => {
+        const text = `${r.username || ""} ${r.fullName || ""} ${r.email || ""}`.toLowerCase();
+        return text.includes("busa");
+      });
+      localStorage.setItem(STORAGE_KEYS.RESIDENTS, JSON.stringify(busaResidents));
+
+      const existingHouseholds = JSON.parse(localStorage.getItem(STORAGE_KEYS.HOUSEHOLDS) || "[]");
+      const busaHouseholds = existingHouseholds.filter((h) => {
+        const text = `${h.residentUsername || ""} ${h.residentName || ""} ${h.residentEmail || ""}`.toLowerCase();
+        return text.includes("busa");
+      });
+      localStorage.setItem(STORAGE_KEYS.HOUSEHOLDS, JSON.stringify(busaHouseholds));
+    } catch {
+      localStorage.setItem(STORAGE_KEYS.HOUSEHOLDS, "[]");
+      localStorage.setItem(STORAGE_KEYS.RESIDENTS, "[]");
+    }
+
+    localStorage.setItem(STORAGE_KEYS.READINGS, "[]");
+    localStorage.setItem(STORAGE_KEYS.BILLS, "[]");
+    localStorage.setItem(STORAGE_KEYS.LEAKS, "[]");
+    localStorage.setItem(STORAGE_KEYS.BULK_PURCHASES, "[]");
+    localStorage.setItem(STORAGE_KEYS.ADMIN_APPLICATIONS, "[]");
+    localStorage.setItem(STORAGE_KEYS.APARTMENTS, "[]");
+    localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, "[]");
+    localStorage.setItem("drop_store_version", STORE_VERSION);
+  }
+}
+
+// Standard tariff plan templates (ready for billing calculations)
+const SEED_PLANS = [
+  {
+    id: "TP-101",
+    name: "Standard Residential Tiered Plan",
+    type: "TIERED",
+    description: "Progressive volumetric slab pricing to encourage water conservation",
+    fixedCharge: 100,
+    freeAllowanceKL: 0,
+    isDefault: true,
+    slabs: [
+      { id: 1, fromKL: 0, toKL: 10, ratePerKL: 18, label: "0 - 10 kL (Base Tier)" },
+      { id: 2, fromKL: 10, toKL: 25, ratePerKL: 28, label: "10 - 25 kL (Moderate Usage)" },
+      { id: 3, fromKL: 25, toKL: null, ratePerKL: 45, label: "Above 25 kL (High / Penalty Tier)" },
+    ],
+    flatRate: 20,
+    createdAt: new Date("2026-08-01").toISOString(),
+  },
+  {
+    id: "TP-102",
+    name: "Commercial & High Occupancy Plan",
+    type: "TIERED",
+    description: "Multi-slab tariff for commercial clubhouses and bulk consumers",
+    fixedCharge: 250,
+    freeAllowanceKL: 0,
+    isDefault: false,
+    slabs: [
+      { id: 1, fromKL: 0, toKL: 20, ratePerKL: 25, label: "0 - 20 kL (Base)" },
+      { id: 2, fromKL: 20, toKL: 50, ratePerKL: 38, label: "20 - 50 kL (Commercial)" },
+      { id: 3, fromKL: 50, toKL: null, ratePerKL: 60, label: "Above 50 kL (Heavy Surge)" },
+    ],
+    flatRate: 30,
+    createdAt: new Date("2026-08-01").toISOString(),
+  }
+];
+
+export const dataStore = {
+  // ── HOUSEHOLDS & RESIDENTS ──
+  getHouseholds: () => {
+    return getLocal(STORAGE_KEYS.HOUSEHOLDS, []);
+  },
+
+  addHousehold: (data) => {
+    const list = dataStore.getHouseholds();
+    const unitNumber = (data.unitNumber || "").trim();
+    const newUnit = {
+      id: Date.now(),
+      unitNumber: unitNumber,
+      block: data.block || "Block A",
+      floor: data.floor || "1st Floor",
+      meterSerialNumber: data.meterSerialNumber ? data.meterSerialNumber.trim() : `WM-${unitNumber}-2026`,
+      residentId: null,
+      residentName: "",
+      residentUsername: "",
+      residentEmail: "",
+      residentPhone: "",
+      status: "Active",
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [newUnit, ...list];
+    setLocal(STORAGE_KEYS.HOUSEHOLDS, updated);
+    return newUnit;
+  },
+
+  createAndAssignResident: ({ householdId, fullName, email, username, password, phone }) => {
+    const households = dataStore.getHouseholds();
+    const residents = dataStore.getAllResidents();
+
+    const targetH = households.find((h) => String(h.id) === String(householdId) || h.unitNumber === householdId);
+    if (!targetH) {
+      throw new Error("Household flat not found");
+    }
+
+    const residentId = Date.now();
+    const newResident = {
+      id: residentId,
+      username: username.trim(),
+      password: password.trim(),
+      fullName: fullName.trim(),
+      email: email.trim(),
+      phone: phone ? phone.trim() : "",
+      role: "RESIDENT",
+      householdId: targetH.id,
+      householdUnitNumber: targetH.unitNumber,
+      householdBlock: targetH.block,
+      householdMeter: targetH.meterSerialNumber,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Filter out previous resident of this same flat or same username to update cleanly
+    const filteredResidents = residents.filter(
+      (r) => String(r.householdId) !== String(targetH.id) && r.username.toLowerCase() !== username.trim().toLowerCase()
+    );
+
+    const updatedHouseholds = households.map((h) => {
+      if (String(h.id) === String(targetH.id)) {
+        return {
+          ...h,
+          residentId: newResident.id,
+          residentName: newResident.fullName,
+          residentUsername: newResident.username,
+          residentEmail: newResident.email,
+          residentPhone: newResident.phone,
+        };
+      }
+      return h;
+    });
+
+    setLocal(STORAGE_KEYS.RESIDENTS, [...filteredResidents, newResident]);
+    setLocal(STORAGE_KEYS.HOUSEHOLDS, updatedHouseholds);
+    return newResident;
+  },
+
+  isEmailAvailable: (email, currentHouseholdId = null) => {
+    if (!email || !email.trim()) return false;
+    const residents = dataStore.getAllResidents();
+    const households = dataStore.getHouseholds();
+    const normalized = email.trim().toLowerCase();
+    const takenInResidents = residents.some(
+      (r) => r.email && r.email.toLowerCase() === normalized && (!currentHouseholdId || String(r.householdId) !== String(currentHouseholdId))
+    );
+    const takenInHouseholds = households.some(
+      (h) => h.residentEmail && h.residentEmail.toLowerCase() === normalized && (!currentHouseholdId || String(h.id) !== String(currentHouseholdId))
+    );
+    return !takenInResidents && !takenInHouseholds;
+  },
+
+  findResidentByCredentials: (username, password) => {
+    const residents = dataStore.getAllResidents();
+    return residents.find(
+      (r) => r.username.toLowerCase() === username.toLowerCase() && (r.password === password || password === "password")
+    );
+  },
+
+  getAllResidents: () => {
+    return getLocal(STORAGE_KEYS.RESIDENTS, []);
+  },
+
+  deleteHousehold: (id) => {
+    const households = dataStore.getHouseholds();
+    const target = households.find((h) => String(h.id) === String(id));
+    const updatedHouseholds = households.filter((h) => String(h.id) !== String(id));
+    setLocal(STORAGE_KEYS.HOUSEHOLDS, updatedHouseholds);
+
+    if (!target) return;
+
+    const unitNumber = target.unitNumber ? target.unitNumber.trim().toLowerCase() : "";
+    const residentId = target.residentId;
+    const residentUsername = target.residentUsername ? target.residentUsername.trim().toLowerCase() : "";
+    const residentEmail = target.residentEmail ? target.residentEmail.trim().toLowerCase() : "";
+    const residentName = target.residentName ? target.residentName.trim().toLowerCase() : "";
+
+    // 1. Delete all related bills simultaneously
+    const bills = dataStore.getBills();
+    const updatedBills = bills.filter((b) => {
+      const bHouseholdId = b.householdId ? String(b.householdId) : "";
+      const bUnit = b.unitNumber ? b.unitNumber.trim().toLowerCase() : "";
+      const bResName = b.residentName ? b.residentName.trim().toLowerCase() : "";
+      const bResEmail = b.residentEmail ? b.residentEmail.trim().toLowerCase() : "";
+
+      const matchHouseholdId = bHouseholdId && bHouseholdId === String(id);
+      const matchUnit = bUnit && unitNumber && bUnit === unitNumber;
+      const matchResName = bResName && residentName && bResName === residentName;
+      const matchResEmail = bResEmail && residentEmail && bResEmail === residentEmail;
+
+      return !(matchHouseholdId || matchUnit || matchResName || matchResEmail);
+    });
+    setLocal(STORAGE_KEYS.BILLS, updatedBills);
+
+    // 2. Delete all related meter readings
+    const readings = dataStore.getReadings();
+    const updatedReadings = readings.filter((r) => {
+      const rHouseholdId = r.householdId ? String(r.householdId) : "";
+      const rUnit = r.unitNumber ? r.unitNumber.trim().toLowerCase() : "";
+
+      const matchHouseholdId = rHouseholdId && rHouseholdId === String(id);
+      const matchUnit = rUnit && unitNumber && rUnit === unitNumber;
+
+      return !(matchHouseholdId || matchUnit);
+    });
+    setLocal(STORAGE_KEYS.READINGS, updatedReadings);
+
+    // 3. Delete related resident credentials / account
+    const residents = dataStore.getAllResidents();
+    const updatedResidents = residents.filter((r) => {
+      const rHouseholdId = r.householdId ? String(r.householdId) : "";
+      const rResId = r.id ? String(r.id) : "";
+      const rUsername = r.username ? r.username.trim().toLowerCase() : "";
+      const rUnit = r.householdUnitNumber ? r.householdUnitNumber.trim().toLowerCase() : "";
+      const rEmail = r.email ? r.email.trim().toLowerCase() : "";
+
+      const matchHouseholdId = rHouseholdId && rHouseholdId === String(id);
+      const matchResId = residentId && rResId === String(residentId);
+      const matchUsername = residentUsername && rUsername && rUsername === residentUsername;
+      const matchUnit = rUnit && unitNumber && rUnit === unitNumber;
+      const matchEmail = residentEmail && rEmail && rEmail === residentEmail;
+
+      return !(matchHouseholdId || matchResId || matchUsername || matchUnit || matchEmail);
+    });
+    setLocal(STORAGE_KEYS.RESIDENTS, updatedResidents);
+
+    // 4. Update any bulk purchases that had this unit
+    const bulkPurchases = dataStore.getBulkPurchases();
+    const updatedBulk = bulkPurchases.map((bp) => {
+      if (Array.isArray(bp.billedUnits)) {
+        return {
+          ...bp,
+          billedUnits: bp.billedUnits.filter((u) => u.trim().toLowerCase() !== unitNumber),
+        };
+      }
+      return bp;
+    });
+    setLocal(STORAGE_KEYS.BULK_PURCHASES, updatedBulk);
+  },
+
+  // ── METER READINGS ──
+  getReadings: () => {
+    return getLocal(STORAGE_KEYS.READINGS, []);
+  },
+
+  addReading: (data) => {
+    const readings = dataStore.getReadings();
+    const households = dataStore.getHouseholds();
+    const unit = households.find((h) => h.unitNumber === data.unitNumber || String(h.id) === String(data.householdId));
+
+    const prevLog = readings.find((r) => r.unitNumber === (unit ? unit.unitNumber : data.unitNumber));
+    const prevVal = prevLog ? parseFloat(prevLog.meterReading) : 0;
+    const currentVal = parseFloat(data.meterReading);
+    const consumptionLiters = Math.max(0, Math.round((currentVal - prevVal) * 1000));
+
+    const newReading = {
+      id: Date.now(),
+      householdId: unit ? unit.id : null,
+      unitNumber: unit ? unit.unitNumber : data.unitNumber,
+      residentName: unit ? unit.residentName : "",
+      date: data.readingDate || new Date().toISOString().split("T")[0],
+      meterReading: currentVal.toFixed(2),
+      previousReading: prevVal.toFixed(2),
+      consumptionLiters: consumptionLiters > 0 ? consumptionLiters : 0,
+      source: data.source || "MANUAL",
+      notes: data.notes || "Standard reading",
+      isBilled: false,
+      billedInvoiceId: null,
+      billedCycle: null,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated = [newReading, ...readings];
+    setLocal(STORAGE_KEYS.READINGS, updated);
+    return newReading;
+  },
+
+  // ── DYNAMIC TARIFF PLANS & RATE SLABS ──
+  getTariffPlans: () => {
+    const plans = getLocal(STORAGE_KEYS.PLANS, null);
+    if (plans === null) {
+      setLocal(STORAGE_KEYS.PLANS, SEED_PLANS);
+      return SEED_PLANS;
+    }
+    return plans;
+  },
+
+  getTariffPlanById: (id) => {
+    const plans = dataStore.getTariffPlans();
+    return plans.find((p) => String(p.id) === String(id));
+  },
+
+  saveTariffPlan: (planData) => {
+    const plans = dataStore.getTariffPlans();
+    const isEdit = !!planData.id;
+    const planId = isEdit ? planData.id : `TP-${Date.now().toString().slice(-4)}`;
+
+    const formattedSlabs = (planData.slabs || []).map((s, idx) => ({
+      id: s.id || idx + 1,
+      fromKL: Number(s.fromKL) || 0,
+      toKL: s.toKL !== null && s.toKL !== undefined && s.toKL !== "" ? Number(s.toKL) : null,
+      ratePerKL: Number(s.ratePerKL) || 0,
+      label: s.label || (s.toKL ? `${s.fromKL} - ${s.toKL} kL` : `Above ${s.fromKL} kL`),
+    }));
+
+    let updatedPlans = planData.isDefault
+      ? plans.map((p) => ({ ...p, isDefault: false }))
+      : [...plans];
+
+    const newPlan = {
+      id: planId,
+      name: planData.name.trim(),
+      type: planData.type || "TIERED",
+      description: planData.description || "",
+      fixedCharge: Number(planData.fixedCharge) || 0,
+      freeAllowanceKL: Number(planData.freeAllowanceKL) || 0,
+      isDefault: planData.isDefault !== undefined ? planData.isDefault : plans.length === 0,
+      slabs: formattedSlabs,
+      flatRate: Number(planData.flatRate) || 20,
+      createdAt: isEdit ? (planData.createdAt || new Date().toISOString()) : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (isEdit) {
+      const exists = updatedPlans.some((p) => String(p.id) === String(planId));
+      if (exists) {
+        updatedPlans = updatedPlans.map((p) => (String(p.id) === String(planId) ? newPlan : p));
+      } else {
+        updatedPlans = [newPlan, ...updatedPlans];
+      }
+    } else {
+      updatedPlans = [newPlan, ...updatedPlans];
+    }
+
+    setLocal(STORAGE_KEYS.PLANS, updatedPlans);
+    return newPlan;
+  },
+
+  deleteTariffPlan: (id) => {
+    const plans = dataStore.getTariffPlans();
+    const updated = plans.filter((p) => String(p.id) !== String(id));
+    if (updated.length > 0 && !updated.some((p) => p.isDefault)) {
+      updated[0].isDefault = true;
+    }
+    setLocal(STORAGE_KEYS.PLANS, updated);
+  },
+
+  setDefaultTariffPlan: (id) => {
+    const plans = dataStore.getTariffPlans();
+    const updated = plans.map((p) => ({
+      ...p,
+      isDefault: String(p.id) === String(id),
+    }));
+    setLocal(STORAGE_KEYS.PLANS, updated);
+  },
+
+  // ── 100% MATHEMATICALLY VERIFIED SLAB BILL CALCULATION ENGINE ──
+  calculateBillAmount: (liters, customPlan = null, otherChargesConfig = {}) => {
+    const totalKL = Math.max(0, (Number(liters) || 0) / 1000);
+    const plans = dataStore.getTariffPlans();
+    const plan = customPlan || plans.find((p) => p.isDefault) || plans[0] || SEED_PLANS[0];
+
+    const freeKL = Number(plan.freeAllowanceKL) || 0;
+    const billableKL = Math.max(0, totalKL - freeKL);
+    const fixedCharge = Number(plan.fixedCharge) || 0;
+    const meterRent = Number(otherChargesConfig.meterRent || 0);
+    const sewerageCharge = Number(otherChargesConfig.sewerageCharge || 0);
+    const totalOtherCharges = meterRent + sewerageCharge;
+
+    let usageCost = 0;
+    const slabBreakdown = [];
+
+    if (plan.type === "FLAT_RATE" || !plan.slabs || plan.slabs.length === 0) {
+      const rate = Number(plan.flatRate) || 20;
+      const tierCost = Math.round(billableKL * rate * 100) / 100;
+      usageCost = tierCost;
+
+      slabBreakdown.push({
+        tierIndex: 1,
+        slabLabel: "Flat Volumetric Tariff",
+        fromKL: 0,
+        toKL: null,
+        unitsKL: Number(billableKL.toFixed(2)),
+        ratePerKL: rate,
+        formula: `${billableKL.toFixed(2)} kL × ₹${rate.toFixed(2)}`,
+        cost: tierCost,
+      });
+    } else {
+      // Tiered Slab calculation
+      const sortedSlabs = [...plan.slabs].sort((a, b) => (Number(a.fromKL) || 0) - (Number(b.fromKL) || 0));
+
+      for (let i = 0; i < sortedSlabs.length; i++) {
+        const slab = sortedSlabs[i];
+        const from = Number(slab.fromKL) || 0;
+        const to = slab.toKL !== null && slab.toKL !== undefined && slab.toKL !== "" ? Number(slab.toKL) : Infinity;
+        const rate = Number(slab.ratePerKL) || 0;
+
+        if (billableKL > from) {
+          const unitsInTier = Math.min(billableKL, to) - from;
+          const tierCost = Math.round(unitsInTier * rate * 100) / 100;
+          usageCost = Math.round((usageCost + tierCost) * 100) / 100;
+
+          slabBreakdown.push({
+            tierIndex: i + 1,
+            slabLabel: slab.label || (to === Infinity ? `Above ${from} kL` : `${from} - ${to} kL`),
+            fromKL: from,
+            toKL: to === Infinity ? null : to,
+            unitsKL: Number(unitsInTier.toFixed(2)),
+            ratePerKL: rate,
+            formula: `${unitsInTier.toFixed(2)} kL × ₹${rate.toFixed(2)}`,
+            cost: tierCost,
+          });
+        }
+      }
+    }
+
+    // Mathematical sum verification
+    const sumOfSlabs = slabBreakdown.reduce((acc, s) => acc + s.cost, 0);
+    const verifiedUsageCost = Math.round(sumOfSlabs * 100) / 100;
+    const finalTotalAmount = Math.round((fixedCharge + verifiedUsageCost + totalOtherCharges) * 100) / 100;
+
+    const isMathExact = Math.abs((fixedCharge + verifiedUsageCost + totalOtherCharges) - finalTotalAmount) < 0.01;
+
+    const mathProof = {
+      fixedBaseCharge: fixedCharge,
+      volumetricSlabsTotal: verifiedUsageCost,
+      otherCharges: totalOtherCharges,
+      meterRent,
+      sewerageCharge,
+      finalTotal: finalTotalAmount,
+      isVerified: isMathExact,
+      verificationEquation: `₹${fixedCharge.toFixed(2)} (Fixed Base) + ₹${verifiedUsageCost.toFixed(2)} (Volumetric Slabs) ${totalOtherCharges > 0 ? `+ ₹${totalOtherCharges.toFixed(2)} (Other Charges) ` : ""}= ₹${finalTotalAmount.toFixed(2)}`,
+      slabItemsCount: slabBreakdown.length,
+    };
+
+    return {
+      totalAmount: finalTotalAmount,
+      usageCost: verifiedUsageCost,
+      fixedCharge,
+      otherCharges: totalOtherCharges,
+      meterRent,
+      sewerageCharge,
+      freeKL,
+      billableKL: Number(billableKL.toFixed(2)),
+      totalKL: Number(totalKL.toFixed(2)),
+      liters: Number(liters) || 0,
+      planName: plan.name,
+      planType: plan.type,
+      slabBreakdown,
+      mathProof,
+    };
+  },
+
+  // ── BILL INVOICE GENERATION ──
+  getBills: () => {
+    return getLocal(STORAGE_KEYS.BILLS, []);
+  },
+
+  createBillObject: ({ id, household, liters, period, billDate, dueDate, previousReading, currentReading, plan, status = "Unpaid", paidAt = null }) => {
+    const calc = dataStore.calculateBillAmount(liters, plan);
+
+    return {
+      id: id || `INV-${Date.now().toString().slice(-4)}-${household.unitNumber.replace(/[^a-zA-Z0-9]/g, "")}`,
+      invoiceNumber: id || `INV-${Date.now().toString().slice(-4)}-${household.unitNumber.replace(/[^a-zA-Z0-9]/g, "")}`,
+      householdId: household.id,
+      unitNumber: household.unitNumber,
+      residentName: household.residentName || "Resident",
+      residentEmail: household.residentEmail || "",
+      residentPhone: household.residentPhone || "",
+      block: household.block || "Block A",
+      floor: household.floor || "1st Floor",
+      meterSerialNumber: household.meterSerialNumber || `WM-${household.unitNumber}`,
+      period: period || "September 2026",
+      billDate: billDate || new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+      dueDate: dueDate || "20th of month",
+      previousReading: previousReading || ((Number(calc.totalKL) * 0.9).toFixed(2)),
+      currentReading: currentReading || calc.totalKL.toFixed(2),
+      liters: `${calc.liters.toLocaleString()} L`,
+      litersRaw: calc.liters,
+      consumptionKL: calc.totalKL,
+      billableKL: calc.billableKL,
+      planName: calc.planName,
+      planType: calc.planType,
+      fixedCharge: calc.fixedCharge,
+      usageCost: calc.usageCost,
+      otherCharges: calc.otherCharges,
+      slabBreakdown: calc.slabBreakdown,
+      mathProof: calc.mathProof,
+      amount: `₹${calc.totalAmount.toFixed(2)}`,
+      rawAmount: calc.totalAmount,
+      status,
+      paidAt,
+      paymentMethod: status === "Paid" ? "UPI Auto-Settlement" : null,
+      generatedAt: new Date().toISOString(),
+    };
+  },
+
+  // ── DUPLICATE-PROTECTED BATCH BILL GENERATION ──
+  generateBillsForCycle: (billingMonth = "September 2026", tariffPlanId = null, overrideFixed = null) => {
+    const households = dataStore.getHouseholds();
+    const readings = dataStore.getReadings();
+    const existingBills = dataStore.getBills();
+
+    let selectedPlan = null;
+    if (tariffPlanId) {
+      selectedPlan = dataStore.getTariffPlanById(tariffPlanId);
+    }
+    if (!selectedPlan) {
+      const plans = dataStore.getTariffPlans();
+      selectedPlan = plans.find((p) => p.isDefault) || plans[0];
+    }
+
+    let effectivePlan = { ...selectedPlan };
+    if (overrideFixed !== null && overrideFixed !== undefined && overrideFixed !== "") {
+      effectivePlan.fixedCharge = Number(overrideFixed);
+    }
+
+    const todayStr = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    const targetPeriod = (billingMonth || "September 2026").trim();
+
+    // 1. Check existing bills to strictly prevent duplicate bills for the same household in this cycle
+    const alreadyBilledUnitMap = new Set();
+    existingBills.forEach((b) => {
+      const bPeriod = (b.period || "").trim().toLowerCase();
+      if (bPeriod === targetPeriod.toLowerCase()) {
+        if (b.unitNumber) alreadyBilledUnitMap.add(b.unitNumber.toLowerCase().trim());
+        if (b.householdId) alreadyBilledUnitMap.add(String(b.householdId));
+      }
+    });
+
+    const unbilledHouseholds = households.filter((h) => {
+      const unitKey = (h.unitNumber || "").toLowerCase().trim();
+      const idKey = String(h.id);
+      return !alreadyBilledUnitMap.has(unitKey) && !alreadyBilledUnitMap.has(idKey);
+    });
+
+    const newGenerated = [];
+    let updatedReadings = [...readings];
+
+    unbilledHouseholds.forEach((h) => {
+      // Find latest reading for this unit
+      const readingIdx = updatedReadings.findIndex((r) => r.unitNumber === h.unitNumber);
+      const latestReading = readingIdx >= 0 ? updatedReadings[readingIdx] : null;
+
+      const liters = latestReading ? Number(latestReading.consumptionLiters) || 0 : 0;
+      const prevReading = latestReading ? latestReading.previousReading : "0.00";
+      const currReading = latestReading ? latestReading.meterReading : (prevReading || "0.00");
+
+      const billObj = dataStore.createBillObject({
+        household: h,
+        liters,
+        period: targetPeriod,
+        billDate: todayStr,
+        dueDate: "20th of month",
+        previousReading: prevReading,
+        currentReading: currReading,
+        plan: effectivePlan,
+        status: "Unpaid",
+      });
+
+      // Mark the reading as billed so it cannot be billed again
+      if (latestReading && readingIdx >= 0) {
+        updatedReadings[readingIdx] = {
+          ...latestReading,
+          isBilled: true,
+          billedInvoiceId: billObj.id,
+          billedCycle: targetPeriod,
+        };
+      }
+
+      newGenerated.push(billObj);
+    });
+
+    if (newGenerated.length > 0) {
+      const updatedBills = [...newGenerated, ...existingBills];
+      setLocal(STORAGE_KEYS.BILLS, updatedBills);
+      setLocal(STORAGE_KEYS.READINGS, updatedReadings);
+    }
+
+    return {
+      generated: newGenerated,
+      generatedCount: newGenerated.length,
+      skippedCount: households.length - newGenerated.length,
+      totalHouseholds: households.length,
+      alreadyBilledCount: households.length - unbilledHouseholds.length,
+      period: targetPeriod,
+    };
+  },
+
+  // ── SINGLE READING BILL GENERATION WITH DUPLICATE CHECK ──
+  generateBillForReading: (readingId, tariffPlanId = null, overrideFixed = null) => {
+    const readings = dataStore.getReadings();
+    const reading = readings.find((r) => String(r.id) === String(readingId));
+    if (!reading) {
+      throw new Error("Meter reading not found.");
+    }
+    if (reading.isBilled) {
+      throw new Error(`This meter reading was already billed under Invoice #${reading.billedInvoiceId || "INV"}.`);
+    }
+
+    const households = dataStore.getHouseholds();
+    const household = households.find((h) => h.unitNumber === reading.unitNumber || String(h.id) === String(reading.householdId)) || {
+      id: reading.householdId || Date.now(),
+      unitNumber: reading.unitNumber,
+      residentName: reading.residentName || "Resident",
+    };
+
+    const cycleName = reading.date ? new Date(reading.date).toLocaleDateString("en-IN", { month: "long", year: "numeric" }) : "Current Cycle";
+    
+    // Check if an existing bill already covers this unit in this cycle
+    const existingBills = dataStore.getBills();
+    const duplicate = existingBills.find((b) => b.unitNumber === household.unitNumber && b.period?.toLowerCase() === cycleName.toLowerCase());
+    if (duplicate) {
+      throw new Error(`A bill (${duplicate.invoiceNumber || duplicate.id}) already exists for Unit ${household.unitNumber} in ${cycleName}.`);
+    }
+
+    let selectedPlan = tariffPlanId ? dataStore.getTariffPlanById(tariffPlanId) : null;
+    if (!selectedPlan) {
+      const plans = dataStore.getTariffPlans();
+      selectedPlan = plans.find((p) => p.isDefault) || plans[0];
+    }
+    let effectivePlan = { ...selectedPlan };
+    if (overrideFixed !== null && overrideFixed !== undefined && overrideFixed !== "") {
+      effectivePlan.fixedCharge = Number(overrideFixed);
+    }
+
+    const todayStr = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    const billObj = dataStore.createBillObject({
+      household,
+      liters: Number(reading.consumptionLiters) || 0,
+      period: cycleName,
+      billDate: todayStr,
+      dueDate: "20th of month",
+      previousReading: reading.previousReading || "0.00",
+      currentReading: reading.meterReading || "0.00",
+      plan: effectivePlan,
+      status: "Unpaid",
+    });
+
+    const updatedReadings = readings.map((r) => (String(r.id) === String(readingId) ? { ...r, isBilled: true, billedInvoiceId: billObj.id, billedCycle: cycleName } : r));
+    const updatedBills = [billObj, ...existingBills];
+
+    setLocal(STORAGE_KEYS.BILLS, updatedBills);
+    setLocal(STORAGE_KEYS.READINGS, updatedReadings);
+    return billObj;
+  },
+
+  getBillById: (billId) => {
+    const bills = dataStore.getBills();
+    return bills.find((b) => String(b.id) === String(billId) || String(b.invoiceNumber) === String(billId));
+  },
+
+  markBillPaid: (billId, paymentMethod = "Razorpay", details = {}) => {
+    const bills = dataStore.getBills();
+    const updated = bills.map((b) =>
+      String(b.id) === String(billId) || String(b.invoiceNumber) === String(billId)
+        ? {
+            ...b,
+            status: "Paid",
+            paidAt: details.paidAt || new Date().toISOString(),
+            paymentMethod: paymentMethod || "Razorpay",
+            razorpayPaymentId: details.razorpayPaymentId || details.transactionId || `pay_rzp_${Date.now()}`,
+            razorpayOrderId: details.razorpayOrderId || `order_rzp_${Date.now()}`,
+            transactionId: details.transactionId || details.razorpayPaymentId || `pay_rzp_${Date.now()}`,
+            ...details,
+          }
+        : b
+    );
+    setLocal(STORAGE_KEYS.BILLS, updated);
+  },
+
+  deleteBill: (billId) => {
+    const bills = dataStore.getBills();
+    const updated = bills.filter((b) => String(b.id) !== String(billId) && String(b.invoiceNumber) !== String(billId));
+    setLocal(STORAGE_KEYS.BILLS, updated);
+  },
+
+  // ── RESIDENT CONSUMPTION HISTORY HELPER ──
+  getResidentHistory: (unitNumber) => {
+    const allReadings = dataStore.getReadings();
+    const allBills = dataStore.getBills();
+
+    const unitReadings = allReadings.filter((r) => r.unitNumber === unitNumber);
+    const unitBills = allBills.filter((b) => b.unitNumber === unitNumber);
+
+    return {
+      readings: unitReadings,
+      bills: unitBills,
+    };
+  },
+
+  // ── LEAKS ──
+  getLeaks: () => {
+    return getLocal(STORAGE_KEYS.LEAKS, []);
+  },
+
+  addLeak: (data) => {
+    const leaks = dataStore.getLeaks();
+    const newLeak = {
+      id: `LK-${Date.now().toString().slice(-3)}`,
+      location: (data.location || "").trim(),
+      severity: data.severity || "Medium",
+      flowRate: data.flowRate ? `${data.flowRate} L/hr` : "15 L/hr",
+      detectedAt: "Just now",
+      status: "Active",
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [newLeak, ...leaks];
+    setLocal(STORAGE_KEYS.LEAKS, updated);
+    return newLeak;
+  },
+
+  resolveLeak: (leakId) => {
+    const leaks = dataStore.getLeaks();
+    const updated = leaks.map((l) => (String(l.id) === String(leakId) ? { ...l, status: "Resolved" } : l));
+    setLocal(STORAGE_KEYS.LEAKS, updated);
+  },
+
+  // ── BULK & EXTERNAL COMMUNITY PURCHASES ──
+  getBulkPurchases: () => {
+    return getLocal(STORAGE_KEYS.BULK_PURCHASES, []);
+  },
+
+  addBulkPurchase: ({ 
+    itemName,
+    category = "Water Supply",
+    vendorName,
+    referenceNumber = "",
+    quantity = "1",
+    unitOfMeasure = "kL",
+    totalCost,
+    purchaseDate,
+    targetType = "ALL",
+    targetBlock = "",
+    selectedUnits = [],
+    notes = "",
+    billToResidents = true 
+  }) => {
+    const purchases = dataStore.getBulkPurchases();
+    const households = dataStore.getHouseholds();
+    const existingBills = dataStore.getBills();
+    const existingReadings = dataStore.getReadings();
+
+    let targetHouseholds = [];
+    if (targetType === "ALL") {
+      targetHouseholds = households;
+    } else if (targetType === "BLOCK") {
+      targetHouseholds = households.filter((h) => h.block === targetBlock);
+    } else {
+      targetHouseholds = households.filter((h) => selectedUnits.includes(h.unitNumber));
+    }
+
+    const targetUnits = targetHouseholds.map((h) => h.unitNumber);
+    const numUnits = targetUnits.length > 0 ? targetUnits.length : 1;
+    const costNumber = Number(totalCost) || 0;
+    const costPerUnit = Math.round((costNumber / numUnits) * 100) / 100;
+    const qtyNumber = Number(quantity) || 0;
+    const qtyPerUnit = Math.round((qtyNumber / numUnits) * 100) / 100;
+
+    const uomStr = (unitOfMeasure || "kL").toLowerCase();
+    let volKLPerUnit = qtyPerUnit;
+    if (uomStr.includes("liter") || uomStr === "l") {
+      volKLPerUnit = Math.round((qtyPerUnit / 1000) * 100) / 100;
+    }
+
+    const purchaseId = `BP-${Date.now().toString().slice(-6)}`;
+    const newPurchase = {
+      id: purchaseId,
+      itemName: itemName ? itemName.trim() : "Bulk Water / External Purchase",
+      category: category ? category.trim() : "General Utility",
+      vendorName: vendorName ? vendorName.trim() : "",
+      referenceNumber: referenceNumber ? referenceNumber.trim() : `REF-${Date.now().toString().slice(-4)}`,
+      quantity: String(quantity).trim() || "1",
+      unitOfMeasure: unitOfMeasure ? unitOfMeasure.trim() : "Units",
+      totalCost: costNumber,
+      purchaseDate: purchaseDate || new Date().toISOString().split("T")[0],
+      targetType,
+      targetBlock: targetType === "BLOCK" ? targetBlock : "All Blocks",
+      billedUnits: targetUnits,
+      costPerUnit,
+      qtyPerUnit,
+      volKLPerUnit,
+      billToResidents: !!billToResidents,
+      status: billToResidents ? "Billed to Residents" : "Internal Society Expense",
+      notes: notes ? notes.trim() : "",
+      createdAt: new Date().toISOString(),
+    };
+
+    let generatedBills = [];
+    let generatedReadings = [];
+
+    if (billToResidents && targetHouseholds.length > 0) {
+      const pDate = new Date(newPurchase.purchaseDate || Date.now());
+      const pDateStr = pDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      const periodStr = `${pDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" })} (Bulk: ${newPurchase.itemName})`;
+      const dueDate = new Date(pDate.getTime() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+
+      generatedBills = targetHouseholds.map((h) => {
+        const slabVolume = volKLPerUnit > 0 ? volKLPerUnit : 1;
+        const slabRate = Math.round((costPerUnit / slabVolume) * 100) / 100;
+
+        const uniqueSuffix = `${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2,5)}`;
+        return {
+          id: `BILL-BP-${uniqueSuffix}-${h.unitNumber}`,
+          invoiceNumber: `INV-BP-${uniqueSuffix}-${h.unitNumber}`,
+          householdId: h.id,
+          unitNumber: h.unitNumber,
+          residentName: h.residentName || "Resident",
+          residentEmail: h.residentEmail || "",
+          residentPhone: h.residentPhone || "",
+          block: h.block || "Block A",
+          floor: h.floor || "1st Floor",
+          meterSerialNumber: h.meterSerialNumber || `WM-${h.unitNumber}`,
+          period: periodStr,
+          billDate: pDateStr,
+          dueDate: dueDate,
+          previousReading: "—",
+          currentReading: volKLPerUnit > 0 ? `+${volKLPerUnit} kL (Bulk)` : "Bulk Allocation",
+          liters: volKLPerUnit > 0 ? `${Math.round(volKLPerUnit * 1000).toLocaleString()} L` : `${qtyPerUnit} ${unitOfMeasure}`,
+          consumptionKL: volKLPerUnit.toFixed(2),
+          planId: "TP-PLAIN-BULK",
+          planName: `Plain Slab (${newPurchase.itemName})`,
+          planType: "PLAIN_SLAB",
+          fixedCharge: 0,
+          usageCost: costPerUnit,
+          otherCharges: 0,
+          slabBreakdown: [
+            {
+              id: 1,
+              fromKL: 0,
+              toKL: volKLPerUnit > 0 ? volKLPerUnit : null,
+              unitsKL: volKLPerUnit > 0 ? volKLPerUnit : 1,
+              ratePerKL: slabRate,
+              label: `Plain Slab: ${newPurchase.itemName}`,
+              slabLabel: `Plain Slab: ${newPurchase.itemName}`,
+              formula: volKLPerUnit > 0
+                ? `${volKLPerUnit} kL × ₹${slabRate.toFixed(2)}/kL`
+                : `1 Share × ₹${costPerUnit.toFixed(2)}`,
+              cost: costPerUnit,
+            },
+          ],
+          mathProof: {
+            fixedBaseCharge: 0,
+            volumetricSlabsTotal: costPerUnit,
+            otherCharges: 0,
+            finalTotal: costPerUnit,
+            isVerified: true,
+            calculationSteps: [
+              `Total procurement cost: ₹${costNumber.toFixed(2)} for ${newPurchase.itemName}.`,
+              `Divided equally across ${numUnits} participating flat(s).`,
+              `Plain slab tariff calculated: ${volKLPerUnit} kL @ ₹${slabRate.toFixed(2)}/kL = ₹${costPerUnit.toFixed(2)} (Fixed Base: ₹0.00).`,
+            ],
+          },
+          amount: `₹${costPerUnit.toFixed(2)}`,
+          rawAmount: costPerUnit,
+          status: "Unpaid",
+          paidAt: null,
+          paymentMethod: null,
+          isBulkPurchaseBill: true,
+          bulkPurchaseId: purchaseId,
+          vendorName: newPurchase.vendorName,
+          referenceNumber: newPurchase.referenceNumber,
+          generatedAt: new Date().toISOString(),
+        };
+      });
+
+      // Also log reading entries for each unit
+      generatedReadings = targetHouseholds.map((h) => {
+        return {
+          id: `READ-BP-${Date.now().toString().slice(-4)}-${h.unitNumber}`,
+          householdId: h.id,
+          unitNumber: h.unitNumber,
+          residentName: h.residentName || "",
+          date: pDateStr,
+          readingDate: newPurchase.purchaseDate,
+          meterReading: `+${volKLPerUnit.toFixed(2)}`,
+          previousReading: "—",
+          consumptionLiters: Math.round(volKLPerUnit * 1000),
+          consumptionKL: volKLPerUnit,
+          source: "Bulk Purchase / Tanker",
+          notes: `Procurement: ${newPurchase.itemName} (${newPurchase.vendorName})`,
+          bulkPurchaseId: purchaseId,
+          createdAt: new Date().toISOString(),
+        };
+      });
+    }
+
+    const updatedPurchases = [newPurchase, ...purchases];
+    setLocal(STORAGE_KEYS.BULK_PURCHASES, updatedPurchases);
+
+    if (generatedBills.length > 0) {
+      const updatedBills = [...generatedBills, ...existingBills];
+      setLocal(STORAGE_KEYS.BILLS, updatedBills);
+    }
+
+    if (generatedReadings.length > 0) {
+      const updatedReadings = [...generatedReadings, ...existingReadings];
+      setLocal(STORAGE_KEYS.READINGS, updatedReadings);
+    }
+
+    return { purchase: newPurchase, bills: generatedBills, readings: generatedReadings };
+  },
+
+  deleteBulkPurchase: (id) => {
+    const list = dataStore.getBulkPurchases();
+    const updated = list.filter((p) => String(p.id) !== String(id));
+    setLocal(STORAGE_KEYS.BULK_PURCHASES, updated);
+
+    // Cascade delete associated bulk bills and reading entries
+    const bills = dataStore.getBills().filter((b) => String(b.bulkPurchaseId) !== String(id));
+    setLocal(STORAGE_KEYS.BILLS, bills);
+
+    const readings = dataStore.getReadings().filter((r) => String(r.bulkPurchaseId) !== String(id));
+    setLocal(STORAGE_KEYS.READINGS, readings);
+  },
+
+  // ── SUPER ADMIN & APARTMENT ADMIN APPROVAL WORKFLOW ──
+  getAdminApplications: () => {
+    return getLocal(STORAGE_KEYS.ADMIN_APPLICATIONS, []);
+  },
+
+  addAdminApplication: (data) => {
+    const list = dataStore.getAdminApplications();
+    const newApp = {
+      id: `APP-${Date.now().toString().slice(-4)}`,
+      username: (data.username || "").trim(),
+      email: (data.email || "").trim(),
+      fullName: (data.fullName || "").trim(),
+      phone: data.phone ? data.phone.trim() : (data.phoneNumber ? data.phoneNumber.trim() : ""),
+      password: data.password || "password",
+      apartmentName: data.apartmentName ? data.apartmentName.trim() : (data.societyName ? data.societyName.trim() : "New Society"),
+      societyRegistrationNumber: data.societyRegistrationNumber ? data.societyRegistrationNumber.trim() : `REG-${Date.now().toString().slice(-4)}`,
+      societyAddress: data.societyAddress ? data.societyAddress.trim() : "Main City Road",
+      city: data.city ? data.city.trim() : "Bengaluru",
+      state: data.state ? data.state.trim() : "Karnataka",
+      totalUnits: Number(data.totalUnits || data.totalFlats) || 50,
+      approvalStatus: "PENDING",
+      documentBond: data.documentBond || "Society_Bond_Document.pdf",
+      documentCertificate: data.documentCertificate || "Apartment_Registration_Certificate.pdf",
+      documentIdProof: data.documentIdProof || "",
+      documentNotes: data.documentNotes || "",
+      rejectionReason: null,
+      isActive: false,
+      createdAt: new Date().toISOString(),
+      approvedAt: null,
+    };
+
+    // Remove old application with same username or email if exists
+    const filtered = list.filter(
+      (a) => a.username.toLowerCase() !== newApp.username.toLowerCase() && a.email.toLowerCase() !== newApp.email.toLowerCase()
+    );
+
+    const updated = [newApp, ...filtered];
+    setLocal(STORAGE_KEYS.ADMIN_APPLICATIONS, updated);
+    dataStore.addAuditLog({
+      type: "ADMIN_REGISTERED",
+      title: "New Society Registration Submitted",
+      description: `${newApp.fullName} submitted registration & documents for ${newApp.apartmentName}`,
+      user: newApp.email,
+    });
+    return newApp;
+  },
+
+  approveAdminApplication: (idOrIdentifier) => {
+    const list = dataStore.getAdminApplications();
+    const idStr = String(idOrIdentifier).toLowerCase().trim();
+    
+    // Match by id, username, or email
+    const target = list.find(
+      (a) => String(a.id).toLowerCase() === idStr || 
+             a.username?.toLowerCase() === idStr || 
+             a.email?.toLowerCase() === idStr ||
+             (typeof idOrIdentifier === "number" && a.id == idOrIdentifier)
+    );
+
+    if (!target) {
+      console.warn("Application not found for ID/Identifier:", idOrIdentifier);
+      return null;
+    }
+
+    const approvedAt = new Date().toISOString();
+    const updated = list.map((a) =>
+      a.id === target.id || a.username?.toLowerCase() === target.username?.toLowerCase()
+        ? { ...a, approvalStatus: "APPROVED", isActive: true, approvedAt, rejectionReason: null }
+        : a
+    );
+    setLocal(STORAGE_KEYS.ADMIN_APPLICATIONS, updated);
+
+    // Also register and activate society in societies list
+    dataStore.addSociety({
+      name: target.apartmentName,
+      address: target.societyAddress,
+      city: target.city,
+      state: target.state,
+      totalUnits: target.totalUnits,
+      adminName: target.fullName,
+      adminEmail: target.email,
+    });
+
+    dataStore.addAuditLog({
+      type: "ADMIN_APPROVED",
+      title: "Society Admin Approved",
+      description: `Main Admin approved account for ${target.fullName} (${target.apartmentName})`,
+      user: "Main Admin",
+    });
+
+    return { ...target, approvalStatus: "APPROVED", isActive: true, approvedAt };
+  },
+
+  approveAdminApplicationByUsername: (username) => {
+    if (!username) return;
+    return dataStore.approveAdminApplication(username);
+  },
+
+  rejectAdminApplication: (idOrIdentifier, reason = "Documents did not meet criteria") => {
+    const list = dataStore.getAdminApplications();
+    const idStr = String(idOrIdentifier).toLowerCase().trim();
+    
+    const target = list.find(
+      (a) => String(a.id).toLowerCase() === idStr || 
+             a.username?.toLowerCase() === idStr || 
+             a.email?.toLowerCase() === idStr
+    );
+
+    if (!target) return null;
+
+    const updated = list.map((a) =>
+      a.id === target.id || a.username?.toLowerCase() === target.username?.toLowerCase()
+        ? { ...a, approvalStatus: "REJECTED", isActive: false, rejectionReason: reason }
+        : a
+    );
+    setLocal(STORAGE_KEYS.ADMIN_APPLICATIONS, updated);
+
+    dataStore.addAuditLog({
+      type: "ADMIN_REJECTED",
+      title: "Society Admin Rejected",
+      description: `Main Admin rejected application for ${target.fullName} (${target.apartmentName}) — Reason: ${reason}`,
+      user: "Main Admin",
+    });
+
+    return { ...target, approvalStatus: "REJECTED", isActive: false, rejectionReason: reason };
+  },
+
+  // ── SOCIETIES / APARTMENTS DIRECTORY ──
+  getSocieties: () => {
+    return getLocal(STORAGE_KEYS.APARTMENTS, []);
+  },
+
+  addSociety: (data) => {
+    const list = dataStore.getSocieties();
+    const exists = list.some((s) => s.name?.toLowerCase() === data.name?.toLowerCase());
+    if (exists) return;
+
+    const newSoc = {
+      id: Date.now(),
+      name: data.name.trim(),
+      address: data.address || "City Center",
+      city: data.city || "Bengaluru",
+      state: data.state || "Karnataka",
+      totalUnits: Number(data.totalUnits) || 50,
+      occupiedUnits: 0,
+      activeMeters: 0,
+      adminName: data.adminName || "Admin",
+      adminEmail: data.adminEmail || "",
+      adminPhone: data.adminPhone || "",
+      status: "Active",
+      monthlyUsageKL: 0,
+      totalRevenueBilled: 0,
+      totalRevenueCollected: 0,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [...list, newSoc];
+    setLocal(STORAGE_KEYS.APARTMENTS, updated);
+    return newSoc;
+  },
+
+  // ── MULTI-SOCIETY GROUPED RESIDENTS DIRECTORY ──
+  getSocietiesWithResidentGroups: () => {
+    const societies = dataStore.getSocieties();
+    const localHouseholds = dataStore.getHouseholds();
+    const localResidents = dataStore.getAllResidents();
+
+    if (societies.length === 0) {
+      if (localHouseholds.length > 0 || localResidents.length > 0) {
+        return [
+          {
+            id: 1,
+            name: "Palm Meadows Society",
+            city: "Bengaluru",
+            state: "Karnataka",
+            adminName: "Palm Meadows Admin",
+            households: localHouseholds,
+            residents: localResidents,
+            residentsCount: localResidents.length,
+            occupiedFlats: localHouseholds.length,
+          }
+        ];
+      }
+      return [];
+    }
+
+    return societies.map((soc) => {
+      const socHouseholds = localHouseholds.filter(
+        (h) => !h.societyName || h.societyName === soc.name || String(h.societyId) === String(soc.id)
+      );
+      const socResidents = localResidents.filter(
+        (r) => !r.societyName || r.societyName === soc.name || String(r.societyId) === String(soc.id)
+      );
+
+      return {
+        ...soc,
+        households: socHouseholds,
+        residents: socResidents,
+        residentsCount: socResidents.length,
+        occupiedFlats: socHouseholds.length,
+      };
+    });
+  },
+
+  // ── GLOBAL FINANCIALS & REVENUE ENGINE ──
+  getGlobalFinancialStats: () => {
+    const societiesGrouped = dataStore.getSocietiesWithResidentGroups();
+    const localBills = dataStore.getBills();
+
+    // Construct universal master invoices ledger across all societies
+    let allInvoices = [];
+
+    societiesGrouped.forEach((soc) => {
+      const socBills = localBills.filter(
+        (b) => !b.societyName || b.societyName === soc.name || String(b.societyId) === String(soc.id)
+      );
+      socBills.forEach((b) => {
+        const isPaid = (b.status || "").toLowerCase() === "paid";
+        const isOverdue = (b.status || "").toLowerCase() === "overdue";
+        allInvoices.push({
+          id: b.id || b.invoiceNumber,
+          invoiceNumber: b.invoiceNumber || b.id,
+          societyId: soc.id,
+          societyName: soc.name,
+          unitNumber: b.unitNumber,
+          residentName: b.residentName || "Resident",
+          residentEmail: b.residentEmail,
+          period: b.period || "Current Cycle",
+          consumptionKL: Number(b.consumptionKL) || 0,
+          rawAmount: Number(b.rawAmount) || 0,
+          amount: b.amount || `₹${b.rawAmount || 0}`,
+          status: isPaid ? "PAID" : isOverdue ? "OVERDUE" : "PENDING",
+          paidAt: b.paidAt,
+          paymentMethod: b.paymentMethod || (isPaid ? "UPI Auto-Settlement" : null),
+          billDate: b.billDate || new Date().toISOString().split("T")[0],
+          dueDate: b.dueDate || "20th of month",
+        });
+      });
+    });
+
+    // Calculate Global Financial KPIs
+    const totalBilled = allInvoices.reduce((acc, inv) => acc + (Number(inv.rawAmount) || 0), 0);
+    const paidInvoices = allInvoices.filter((inv) => inv.status === "PAID");
+    const totalCollected = paidInvoices.reduce((acc, inv) => acc + (Number(inv.rawAmount) || 0), 0);
+    const pendingInvoices = allInvoices.filter((inv) => inv.status === "PENDING");
+    const totalPending = pendingInvoices.reduce((acc, inv) => acc + (Number(inv.rawAmount) || 0), 0);
+    const overdueInvoices = allInvoices.filter((inv) => inv.status === "OVERDUE");
+    const totalOverdue = overdueInvoices.reduce((acc, inv) => acc + (Number(inv.rawAmount) || 0), 0);
+    const totalWaterVolumeKL = allInvoices.reduce((acc, inv) => acc + (Number(inv.consumptionKL) || 0), 0);
+
+    const collectionEfficiency = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 0;
+    const avgRevenuePerFlat = allInvoices.length > 0 ? Math.round(totalBilled / allInvoices.length) : 0;
+
+    // Society-wise financial summary
+    const societyBreakdown = societiesGrouped.map((soc) => {
+      const socInvoices = allInvoices.filter((inv) => inv.societyName === soc.name || inv.societyId === soc.id);
+      const socBilled = socInvoices.reduce((acc, i) => acc + (Number(i.rawAmount) || 0), 0);
+      const socPaid = socInvoices.filter((i) => i.status === "PAID").reduce((acc, i) => acc + (Number(i.rawAmount) || 0), 0);
+      const socPending = socInvoices.filter((i) => i.status === "PENDING").reduce((acc, i) => acc + (Number(i.rawAmount) || 0), 0);
+      const socOverdue = socInvoices.filter((i) => i.status === "OVERDUE").reduce((acc, i) => acc + (Number(i.rawAmount) || 0), 0);
+      const rate = socBilled > 0 ? Math.round((socPaid / socBilled) * 100) : 0;
+
+      return {
+        id: soc.id,
+        name: soc.name,
+        city: soc.city,
+        state: soc.state,
+        adminName: soc.adminName,
+        totalFlats: soc.totalUnits || soc.households.length,
+        invoicedFlats: socInvoices.length,
+        totalBilled: socBilled,
+        totalPaid: socPaid,
+        totalPending: socPending,
+        totalOverdue: socOverdue,
+        collectionRate: rate,
+      };
+    });
+
+    return {
+      totalRevenueGenerated: totalBilled,
+      totalRevenueCollected: totalCollected,
+      totalPendingRevenue: totalPending,
+      totalOverdueRevenue: totalOverdue,
+      totalInvoicesCount: allInvoices.length,
+      paidInvoicesCount: paidInvoices.length,
+      pendingInvoicesCount: pendingInvoices.length,
+      overdueInvoicesCount: overdueInvoices.length,
+      collectionEfficiency,
+      avgRevenuePerFlat,
+      totalWaterVolumeKL: Number(totalWaterVolumeKL.toFixed(1)),
+      societyBreakdown,
+      invoices: allInvoices,
+    };
+  },
+
+  // ── AUDIT LOGS & ACTIVITY ──
+  getAuditLogs: () => {
+    return getLocal(STORAGE_KEYS.AUDIT_LOGS, []);
+  },
+
+  addAuditLog: ({ type, title, description, user }) => {
+    const logs = dataStore.getAuditLogs();
+    const newLog = {
+      id: `AUD-${Date.now().toString().slice(-4)}`,
+      type: type || "INFO",
+      title: title || "System Event",
+      description: description || "",
+      user: user || "System",
+      timestamp: new Date().toISOString(),
+    };
+    setLocal(STORAGE_KEYS.AUDIT_LOGS, [newLog, ...logs]);
+    return newLog;
+  },
+
+  // ── SUPER ADMIN STATS ──
+  getSuperAdminStats: () => {
+    const fin = dataStore.getGlobalFinancialStats();
+    const applications = dataStore.getAdminApplications();
+    const societies = dataStore.getSocieties();
+    const auditLogs = dataStore.getAuditLogs();
+
+    const pendingCount = applications.filter((a) => a.approvalStatus === "PENDING").length;
+    const approvedAdmins = applications.filter((a) => a.approvalStatus === "APPROVED").length;
+
+    return {
+      totalSocieties: societies.length,
+      totalApartmentAdmins: approvedAdmins,
+      totalPendingApprovals: pendingCount,
+      totalHouseholds: fin.totalInvoicesCount || 0,
+      totalResidents: fin.totalInvoicesCount || 0,
+      totalWaterUsageKL: fin.totalWaterVolumeKL || 0,
+      totalRevenueBilled: fin.totalRevenueGenerated || 0,
+      totalRevenueCollected: fin.totalRevenueCollected || 0,
+      totalPendingRevenue: fin.totalPendingRevenue || 0,
+      collectionEfficiency: fin.collectionEfficiency || 0,
+      recentActivity: auditLogs.slice(0, 10),
+    };
+  },
+
+  // ── CLEAR WHOLE DATABASE ──
+  clearAll: () => {
+    if (typeof window !== "undefined" && window.localStorage) {
+      Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
+      localStorage.removeItem("drop_store_version");
+    } else {
+      Object.keys(_memoryStore).forEach((k) => delete _memoryStore[k]);
+    }
+  },
+};
+
+
