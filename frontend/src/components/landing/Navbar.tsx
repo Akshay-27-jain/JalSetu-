@@ -50,7 +50,7 @@ export function Navbar() {
           ? 'border-b border-slate-200/90 bg-white/95 backdrop-blur-xl shadow-xs'
           : mobileOpen
           ? 'border-b border-slate-200 bg-white shadow-md'
-          : 'border-b border-transparent bg-transparent'
+          : 'border-b border-white/5 bg-gradient-to-b from-slate-950/70 via-slate-950/30 to-transparent'
       }`}
     >
       <nav className="w-full flex items-center justify-between px-6 sm:px-8 lg:px-12 py-3.5 sm:py-4">
@@ -63,7 +63,7 @@ export function Navbar() {
               onClick={() => go(link.href)}
               className={`rounded-lg px-3.5 py-2 text-xs sm:text-sm font-semibold transition-colors ${
                 onDark
-                  ? 'text-white/90 hover:bg-white/15 hover:text-white drop-shadow-xs'
+                  ? 'text-white hover:bg-white/15 hover:text-aqua-200 drop-shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
@@ -75,20 +75,20 @@ export function Navbar() {
         <div className="hidden items-center gap-2.5 md:flex">
           <PwaInstallButton
             variant="pill"
-            className={onDark ? 'bg-white/15 text-white border-white/25 hover:bg-white/25' : ''}
+            className={onDark ? 'bg-white/15 text-white border-white/30 hover:bg-white/25 backdrop-blur-xs shadow-xs' : ''}
           />
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate('/login')}
-            className={onDark ? 'text-white hover:bg-white/10 font-semibold' : 'text-slate-700 hover:bg-slate-100 font-semibold'}
+            className={onDark ? 'text-white hover:bg-white/15 font-semibold drop-shadow-xs' : 'text-slate-700 hover:bg-slate-100 font-semibold'}
           >
             Sign In
           </Button>
           <Button
             size="sm"
             onClick={() => navigate('/register')}
-            className={onDark ? 'bg-white text-brand-700 hover:bg-brand-50 font-bold shadow-sm' : 'bg-brand-600 text-white hover:bg-brand-700 font-bold shadow-xs'}
+            className={onDark ? 'bg-white text-slate-900 hover:bg-slate-100 font-bold shadow-md hover:shadow-lg transition-all' : 'bg-brand-600 text-white hover:bg-brand-700 font-bold shadow-xs'}
           >
             Register Society
           </Button>
