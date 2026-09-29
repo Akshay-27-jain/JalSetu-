@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="jalsetuGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2FA3FF" />
+      <stop offset="45%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+    <filter id="waveGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0284C7" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Squircle Rounded App Icon -->
+  <rect width="512" height="512" rx="0" fill="url(#jalsetuGrad)" />
+
+  <!-- 3 Clean Waves Lines from JalSetu Logo -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" filter="url(#waveGlow)">
+    <!-- Wave 1 (Top) -->
+    <path d="M 120 185 C 150 160, 180 160, 210 185 C 240 210, 272 210, 302 185 C 332 160, 362 160, 392 185" />
+    <!-- Wave 2 (Middle) -->
+    <path d="M 120 256 C 150 231, 180 231, 210 256 C 240 281, 272 281, 302 256 C 332 231, 362 231, 392 256" />
+    <!-- Wave 3 (Bottom) -->
+    <path d="M 120 327 C 150 302, 180 302, 210 327 C 240 352, 272 352, 302 327 C 332 302, 362 302, 392 327" />
+  </g>
+</svg>

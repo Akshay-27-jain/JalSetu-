@@ -1,0 +1,28 @@
+# =============================================================================
+# JalSetu Smart Water Management - Local Configuration Template
+# Copy this file to 'application-local.properties' and fill in your credentials.
+# =============================================================================
+
+# PostgreSQL Database Configuration
+DB_URL=jdbc:postgresql://localhost:5432/smartwater_db
+DB_USERNAME=postgres
+DB_PASSWORD=your_postgres_password_here
+
+# JWT Secret (minimum 256-bit secure key)
+JWT_SECRET=your_jwt_secret_min_256_bits_here
+
+# Gmail SMTP Configuration for automated resident bills & alerts
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your_gmail_address_here
+MAIL_PASSWORD=your_gmail_app_password_here
+
+# Razorpay Payment Gateway Credentials (Test/Live)
+RAZORPAY_KEY_ID=your_razorpay_key_id_here
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret_here
+
+# Google OAuth 2.0 Client ID for social authentication
+GOOGLE_CLIENT_ID=your_google_oauth_client_id_here
+
+# Google Gemini API Key for document verification & water tips
+GEMINI_API_KEY=your_gemini_api_key_here

@@ -1,0 +1,77 @@
+# =============================================================================
+# JalSetu - Root .gitignore
+# =============================================================================
+
+# Environment Files & Secrets (CRITICAL - NEVER COMMIT)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+client_secret*.json
+
+# Local Configuration Overrides
+application-local.properties
+application-local.yml
+**/application-local.properties
+**/application-local.yml
+application-dev.properties
+application-prod.properties
+
+# Node & Frontend Build Outputs
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.npm/
+.eslintcache
+*.tsbuildinfo
+
+# Java & Backend Build Outputs
+target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE & Editor Specific Files
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+.project
+.classpath
+.settings/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Logs & Runtime Artifacts
+*.log
+logs/
+**/logs/
+
+# Scratch & Temporary Test Files
+scratch/
+test-documents/
+*.pdf
+temp_repo/
+*.tmp
+reference/
+.postman/
+generate_test_docs.py

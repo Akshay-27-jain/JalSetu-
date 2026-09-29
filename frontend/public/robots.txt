@@ -1,0 +1,16 @@
+# Robots.txt for JalSetu Smart Water Management Platform
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+Allow: /privacy
+Allow: /terms
+Allow: /cookies
+
+# Disallow private user & admin dashboard routes
+Disallow: /main-admin/
+Disallow: /community-admin/
+Disallow: /resident/
+Disallow: /api/
+
+Sitemap: https://jalsetu.in/sitemap.xml

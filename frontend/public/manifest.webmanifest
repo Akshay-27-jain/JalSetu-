@@ -1,0 +1,106 @@
+{
+  "name": "JalSetu — Smart Water Management Platform",
+  "short_name": "JalSetu",
+  "description": "Residential water usage monitoring, smart leak anomaly detection, and automated tiered billing platform.",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/?source=pwa",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "orientation": "any",
+  "background_color": "#0B1120",
+  "theme_color": "#0284C7",
+  "categories": [
+    "utilities",
+    "productivity",
+    "finance",
+    "sustainability"
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Community Dashboard",
+      "short_name": "Dashboard",
+      "description": "Open Community Water Dashboard",
+      "url": "/community-admin/dashboard",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Resident Portal",
+      "short_name": "My Usage",
+      "description": "Check Personal Water Consumption & Invoices",
+      "url": "/resident/dashboard",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Meter Readings",
+      "short_name": "Meters",
+      "description": "Record & View Water Meter Readings",
+      "url": "/community-admin/meter-readings",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Billing & Invoices",
+      "short_name": "Billing",
+      "description": "Manage Community Water Invoices & Apportionment",
+      "url": "/community-admin/billing",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

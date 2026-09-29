@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-slate-50 text-slate-800 transition-colors duration-200;
+  }
+  html.dark body {
+    @apply bg-[#0B1120] text-slate-100;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    @apply tracking-tight;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0B1120] disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98];
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow-md hover:shadow-brand-500/20 active:bg-brand-800;
+  }
+  .btn-secondary {
+    @apply btn bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 dark:bg-slate-800/90 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-700/80 dark:hover:border-slate-600;
+  }
+  .btn-ghost {
+    @apply btn text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800/80;
+  }
+  .btn-danger {
+    @apply btn bg-rose-600 text-white shadow-sm hover:bg-rose-700 hover:shadow-md active:bg-rose-800 focus-visible:ring-rose-500;
+  }
+  .card {
+    @apply rounded-2xl bg-white border border-slate-200/80 shadow-card transition-all duration-200 dark:bg-[#131B2E] dark:border-slate-800/80;
+  }
+  .card-hover {
+    @apply card hover:shadow-card-hover hover:border-slate-300 dark:hover:border-slate-700/80;
+  }
+  .input-field {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 transition-all duration-150 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100 dark:placeholder-slate-500 dark:hover:border-slate-600 dark:focus:border-brand-400 dark:focus:ring-brand-400/20;
+  }
+  .input-label {
+    @apply block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5;
+  }
+  .table-container {
+    @apply overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-card dark:border-slate-800/80 dark:bg-[#131B2E];
+  }
+  .table-header {
+    @apply border-b border-slate-200/80 bg-slate-50/80 px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-600 dark:border-slate-800/80 dark:bg-slate-900/50 dark:text-slate-400;
+  }
+  .table-row {
+    @apply border-b border-slate-100 transition-colors duration-150 hover:bg-slate-50/70 dark:border-slate-800/60 dark:hover:bg-slate-800/40;
+  }
+}
+
+/* Custom transitions and scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Eradicate Google Translate Banner, Tooltips & Box Highlights */
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+.goog-te-balloon-frame,
+#goog-gt-tt,
+#goog-gt-vt,
+.goog-te-banner,
+.skiptranslate,
+.goog-tooltip,
+.goog-tooltip:hover,
+.VIpgJd-ZVi9od-ORHb-OEVmcd,
+.VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
+.VIpgJd-ZVi9od-xl07Ob-OEVmcd,
+iframe.goog-te-banner-frame,
+div[id^="goog-gt-"],
+.goog-te-menu-value {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body {
+  top: 0px !important;
+  position: static !important;
+}
+
+font {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  vertical-align: inherit !important;
+  color: inherit !important;
+}
+
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
