@@ -31,6 +31,8 @@ import {
   Scale,
   Activity,
   Check,
+  X,
+  Clock,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -63,7 +65,8 @@ export const ApportionmentReportsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'apportionment' | 'audit' | 'simulator' | 'cycles'>('apportionment');
 
   // Filter States
-  const [periodFilter, setPeriodFilter] = useState<'this-month' | 'last-30' | 'all'>('this-month');
+  const [periodFilter, setPeriodFilter] = useState<'this-month' | 'last-30' | 'past-year' | 'year-before' | 'specific-date' | 'all'>('this-month');
+  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [wingFilter, setWingFilter] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -76,7 +79,7 @@ export const ApportionmentReportsPage: React.FC = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [periodFilter, wingFilter, searchTerm, activeTab]);
+  }, [periodFilter, selectedDate, wingFilter, searchTerm, activeTab]);
 
   const loadReportData = async () => {
     try {
@@ -105,19 +108,47 @@ export const ApportionmentReportsPage: React.FC = () => {
     loadReportData();
   }, []);
 
-  // Filter readings based on period
+  // Filter readings based on period (This Month, 30 Days, Year Before, Past Year, Specific Date, All)
   const filteredReadings = useMemo(() => {
+    if (!readings || readings.length === 0) return [];
     if (periodFilter === 'all') return readings;
+
     const now = new Date();
-    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const currentYear = now.getFullYear();
+    const currentMonthStr = `${currentYear}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
     if (periodFilter === 'this-month') {
-      return readings.filter((r) => r.readingDate.startsWith(currentMonthStr));
+      return readings.filter((r) => r.readingDate && r.readingDate.startsWith(currentMonthStr));
     }
 
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    return readings.filter((r) => r.readingDate >= thirtyDaysAgo);
-  }, [readings, periodFilter]);
+    if (periodFilter === 'last-30') {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      return readings.filter((r) => r.readingDate && r.readingDate >= thirtyDaysAgo);
+    }
+
+    if (periodFilter === 'past-year') {
+      const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      return readings.filter((r) => r.readingDate && r.readingDate >= oneYearAgo);
+    }
+
+    if (periodFilter === 'year-before') {
+      const lastYearPrefix = `${currentYear - 1}-`;
+      const matchesLastYear = readings.filter((r) => r.readingDate && r.readingDate.startsWith(lastYearPrefix));
+      if (matchesLastYear.length > 0) {
+        return matchesLastYear;
+      }
+      const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const twoYearsAgo = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      return readings.filter((r) => r.readingDate && r.readingDate >= twoYearsAgo && r.readingDate < oneYearAgo);
+    }
+
+    if (periodFilter === 'specific-date') {
+      if (!selectedDate) return readings;
+      return readings.filter((r) => r.readingDate && r.readingDate.startsWith(selectedDate));
+    }
+
+    return readings;
+  }, [readings, periodFilter, selectedDate]);
 
   // Aggregate Apportionment Data by Flat
   const apportionmentData = useMemo(() => {
@@ -191,15 +222,26 @@ export const ApportionmentReportsPage: React.FC = () => {
     return households.reduce((sum, h) => sum + (h.occupancyCount || 3), 0) || 1;
   }, [households]);
 
+  // Dynamically extract all available wings from households
+  const availableWings = useMemo(() => {
+    const wingsSet = new Set<string>();
+    households.forEach((h) => {
+      const flat = h.flatNumber.trim().toUpperCase();
+      const match = flat.match(/^([A-Z]+)/);
+      if (match) {
+        wingsSet.add(match[1]);
+      }
+    });
+    return Array.from(wingsSet).sort();
+  }, [households]);
+
   // Apply Wing and Search filter to table and chart view
   const displayApportionment = useMemo(() => {
     return apportionmentData.filter((item) => {
       const flat = item.household.flatNumber.toUpperCase();
       const matchesWing =
         wingFilter === 'ALL' ||
-        (wingFilter === 'A' && flat.startsWith('A')) ||
-        (wingFilter === 'B' && flat.startsWith('B')) ||
-        (wingFilter === 'C' && flat.startsWith('C')) ||
+        flat.startsWith(wingFilter) ||
         (wingFilter === 'PG' && flat.startsWith('PG'));
 
       const term = searchTerm.toLowerCase().trim();
@@ -212,6 +254,87 @@ export const ApportionmentReportsPage: React.FC = () => {
       return matchesWing && matchesSearch;
     });
   }, [apportionmentData, wingFilter, searchTerm]);
+
+  // Summary Stats for the Top Cards (matching user screenshot)
+  const totalWaterApportionedKl = useMemo(() => {
+    return Math.round(displayApportionment.reduce((acc, curr) => acc + curr.totalConsumptionKl, 0) * 100) / 100;
+  }, [displayApportionment]);
+
+  const avgUsagePerFlat = useMemo(() => {
+    if (displayApportionment.length === 0) return 0;
+    return Math.round((totalWaterApportionedKl / displayApportionment.length) * 100) / 100;
+  }, [totalWaterApportionedKl, displayApportionment]);
+
+  const estApportionedCost = useMemo(() => {
+    const baseRate = tariff?.baseRatePerKl || 15;
+    return Math.round(totalWaterApportionedKl * baseRate * 10) / 10;
+  }, [totalWaterApportionedKl, tariff]);
+
+  const fairnessPercentage = useMemo(() => {
+    if (displayApportionment.length === 0) return 100;
+    const meteredCount = displayApportionment.filter((d) => d.household.hasMeter).length;
+    return Math.round((meteredCount / displayApportionment.length) * 100);
+  }, [displayApportionment]);
+
+  // Flat-by-Flat Water Consumption Bar Chart Data (matching screenshot)
+  const flatChartData = useMemo(() => {
+    return displayApportionment.map((item) => {
+      const vol = Number(item.totalConsumptionKl.toFixed(2));
+      const isOveruse = item.hasOveruse || (avgUsagePerFlat > 0 && vol > avgUsagePerFlat * 1.35) || vol > 14;
+      return {
+        flat: `Flat ${item.household.flatNumber}`,
+        flatRaw: item.household.flatNumber,
+        consumption: vol,
+        liters: Math.round(vol * 1000),
+        resident: item.household.residentName || 'Resident',
+        meter: item.household.meterSerialNumber || 'UNMETERED',
+        isOveruse: isOveruse && vol > 0,
+      };
+    });
+  }, [displayApportionment, avgUsagePerFlat]);
+
+  // Wing Apportionment Share Data (matching screenshot)
+  const wingShareData = useMemo(() => {
+    const wingMap = new Map<string, {
+      name: string;
+      flats: string[];
+      totalKl: number;
+    }>();
+
+    displayApportionment.forEach((item) => {
+      const flat = item.household.flatNumber.trim();
+      const match = flat.match(/^([A-Za-z]+)/);
+      const wingKey = match ? match[1].toUpperCase() : 'OTHER';
+
+      if (!wingMap.has(wingKey)) {
+        wingMap.set(wingKey, {
+          name: wingKey,
+          flats: [],
+          totalKl: 0,
+        });
+      }
+      const entry = wingMap.get(wingKey)!;
+      entry.flats.push(flat);
+      entry.totalKl += item.totalConsumptionKl;
+    });
+
+    const totalSocietyWater = totalWaterApportionedKl || 1;
+    const colors = ['#0284c7', '#06b6d4', '#10b981', '#6366f1', '#f59e0b', '#ec4899'];
+
+    return Array.from(wingMap.values())
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((w, idx) => {
+        const pct = totalSocietyWater > 0 ? (w.totalKl / totalSocietyWater) * 100 : 0;
+        const sampleFlats = w.flats.slice(0, 3).join(', ') + (w.flats.length > 3 ? '...' : '');
+        return {
+          wing: w.name,
+          sampleFlats,
+          totalKl: Number(w.totalKl.toFixed(2)),
+          percentage: Number(pct.toFixed(1)),
+          color: colors[idx % colors.length],
+        };
+      });
+  }, [displayApportionment, totalWaterApportionedKl]);
 
   // Paginated Rows
   const totalPages = Math.ceil(displayApportionment.length / pageSize) || 1;
@@ -420,77 +543,366 @@ export const ApportionmentReportsPage: React.FC = () => {
       {/* TAB 1: Household Charge Apportionment */}
       {activeTab === 'apportionment' && (
         <div className="space-y-6">
-          {/* Top 8 Highest Consumers Chart */}
-          <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#131B2E] p-6 shadow-sm">
-            <h3 className="font-display text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-brand-600 dark:text-brand-400" />
-              <span>Top Water Consuming Household Units (kL)</span>
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-              Highlighted flats with consumption exceeding the community average or flagged for overuse
-            </p>
-
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topConsumersChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
-                  <XAxis dataKey="flat" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} unit=" kL" />
-                  <Tooltip
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 p-3 text-xs shadow-xl backdrop-blur-md">
-                            <p className="font-bold text-slate-900 dark:text-white">Flat {label}</p>
-                            <p className="text-sky-600 dark:text-sky-400 font-bold">Usage: {payload[0]?.value} kL</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="consumption" radius={[6, 6, 0, 0]}>
-                    {topConsumersChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.isOveruse ? '#f43f5e' : '#0284c7'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+          {/* Top Filter Bar (matching screenshot) */}
+          <div className="bg-white dark:bg-[#131B2E] p-3 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+            {/* Left: Period Filter Segmented Pills */}
+            <div className="flex flex-wrap items-center gap-1.5 bg-slate-100/90 dark:bg-slate-800/80 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setPeriodFilter('this-month')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  periodFilter === 'this-month'
+                    ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                This Month
+              </button>
+              <button
+                type="button"
+                onClick={() => setPeriodFilter('last-30')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  periodFilter === 'last-30'
+                    ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Last 30 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => setPeriodFilter('year-before')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  periodFilter === 'year-before'
+                    ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="View consumption recorded during the previous year"
+              >
+                Year Before
+              </button>
+              <button
+                type="button"
+                onClick={() => setPeriodFilter('past-year')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  periodFilter === 'past-year'
+                    ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="View cumulative water usage over the last 365 days"
+              >
+                Past Year (12M)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPeriodFilter('specific-date')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  periodFilter === 'specific-date'
+                    ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Select Date</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPeriodFilter('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  periodFilter === 'all'
+                    ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                All-Time History
+              </button>
             </div>
-          </div>
 
-          {/* Filters Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-[#131B2E] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <div className="flex flex-wrap items-center gap-2">
+            {/* When Specific Date is chosen, show date input */}
+            {periodFilter === 'specific-date' && (
+              <div className="flex items-center gap-2 bg-brand-50/70 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 px-3 py-1.5 rounded-xl animate-fade-in">
+                <Calendar className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Target Date:</span>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="text-xs font-semibold px-2 py-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
+                />
+              </div>
+            )}
+
+            {/* Right: Wing Filter + Search Input */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Wing Filter Dropdown */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                  Filter Wing:
+                </span>
+                <select
+                  value={wingFilter}
+                  onChange={(e) => setWingFilter(e.target.value)}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 cursor-pointer"
+                >
+                  <option value="ALL">All Wings ({availableWings.join(', ') || 'A, B, C'})</option>
+                  {availableWings.map((w) => (
+                    <option key={w} value={w}>Wing {w}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Search Input */}
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search flat or resident..."
+                  placeholder="Search flat, meter, resident..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 pr-4 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 w-56"
+                  className="pl-9 pr-8 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 w-56 sm:w-64"
                 />
-              </div>
-
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-                {['ALL', 'A', 'B', 'C', 'PG'].map((wing) => (
+                {searchTerm && (
                   <button
-                    key={wing}
-                    onClick={() => setWingFilter(wing)}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                      wingFilter === wing ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                    }`}
+                    type="button"
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs cursor-pointer"
+                    title="Clear search"
                   >
-                    {wing === 'ALL' ? 'All Wings' : `Wing ${wing}`}
+                    <X className="w-3.5 h-3.5" />
                   </button>
-                ))}
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Stat Cards Grid (matching screenshot) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* 1. TOTAL WATER APPORTIONED */}
+            <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#131B2E] p-5 shadow-sm flex items-start justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 mb-1.5">
+                  TOTAL WATER APPORTIONED
+                </p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    {totalWaterApportionedKl.toFixed(1)}
+                  </span>
+                  <span className="text-sm font-bold text-slate-500">kL</span>
+                </div>
+                <p className="text-xs text-sky-600 dark:text-sky-400 font-semibold mt-1">
+                  {Math.round(totalWaterApportionedKl * 1000).toLocaleString()} Liters recorded
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-sky-50 dark:bg-sky-950/80 border border-sky-100 dark:border-sky-800/80 flex items-center justify-center text-sky-500 shrink-0">
+                <Droplets className="h-5 w-5" />
               </div>
             </div>
 
-            <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
-              Showing {paginatedRows.length} of {displayApportionment.length} units
+            {/* 2. AVG USAGE PER FLAT */}
+            <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#131B2E] p-5 shadow-sm flex items-start justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 mb-1.5">
+                  AVG USAGE PER FLAT
+                </p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    {avgUsagePerFlat.toFixed(2)}
+                  </span>
+                  <span className="text-sm font-bold text-slate-500">kL / flat</span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Across {displayApportionment.length} residential units
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-sky-50 dark:bg-sky-950/80 border border-sky-100 dark:border-sky-800/80 flex items-center justify-center text-sky-500 shrink-0">
+                <Gauge className="h-5 w-5" />
+              </div>
             </div>
+
+            {/* 3. EST. APPORTIONED COST */}
+            <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#131B2E] p-5 shadow-sm flex items-start justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 mb-1.5">
+                  EST. APPORTIONED COST
+                </p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight">
+                    ₹{estApportionedCost.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
+                  Tiered base slab rate ₹{tariff?.baseRatePerKl || 15}/kL
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-100 dark:border-emerald-800/80 flex items-center justify-center text-emerald-500 shrink-0">
+                <IndianRupee className="h-5 w-5" />
+              </div>
+            </div>
+
+            {/* 4. APPORTIONMENT FAIRNESS */}
+            <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#131B2E] p-5 shadow-sm flex items-start justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 mb-1.5">
+                  APPORTIONMENT FAIRNESS
+                </p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 tracking-tight">
+                    {fairnessPercentage}%
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Sub-metered (Zero flat-rate guesswork)
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-100 dark:border-emerald-800/80 flex items-center justify-center text-emerald-500 shrink-0">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
+
+          {/* 2-Column Dashboard (Flat-by-Flat Bar Chart + Wing Apportionment Share) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left: Flat-by-Flat Bar Chart (8 cols) */}
+            <div className="lg:col-span-8 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#131B2E] p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                <div>
+                  <h3 className="font-display text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-sky-500" />
+                    <span>Flat-by-Flat Water Consumption (kL)</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Individual household metered water volume for fair apportionment
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-4 text-xs font-semibold">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7]"></span>
+                    <span className="text-slate-600 dark:text-slate-300">Standard Usage</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]"></span>
+                    <span className="text-slate-600 dark:text-slate-300">Overuse Slab</span>
+                  </div>
+                </div>
+              </div>
+
+              {flatChartData.length === 0 ? (
+                <div className="h-72 flex flex-col items-center justify-center text-slate-400 text-xs">
+                  <Droplets className="w-8 h-8 mb-2 opacity-40 text-sky-400" />
+                  <p>No metered usage logs found for this filter combination.</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Try selecting a different date period or clearing your search term.</p>
+                </div>
+              ) : (
+                <div className="h-72 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={flatChartData} margin={{ top: 15, right: 15, left: -15, bottom: 25 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.6} />
+                      <XAxis
+                        dataKey="flat"
+                        angle={flatChartData.length > 5 ? -25 : 0}
+                        textAnchor={flatChartData.length > 5 ? "end" : "middle"}
+                        interval={0}
+                        tick={{ fontSize: 11, fill: '#64748b' }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 11, fill: '#64748b' }}
+                        axisLine={false}
+                        tickLine={false}
+                        unit=" kL"
+                      />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 p-3 text-xs shadow-xl backdrop-blur-md space-y-1">
+                                <p className="font-bold text-slate-900 dark:text-white text-sm">{data.flat}</p>
+                                <p className="text-slate-500 dark:text-slate-400">Resident: <strong className="text-slate-700 dark:text-slate-300">{data.resident}</strong></p>
+                                <p className="text-slate-500 dark:text-slate-400">Meter Serial: <strong className="font-mono text-slate-700 dark:text-slate-300">{data.meter}</strong></p>
+                                <div className="pt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+                                  <span className="font-bold text-sky-600 dark:text-sky-400">{data.consumption} kL ({data.liters.toLocaleString()} L)</span>
+                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                    data.isOveruse ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300' : 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
+                                  }`}>
+                                    {data.isOveruse ? 'Overuse Slab' : 'Standard Usage'}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar dataKey="consumption" radius={[6, 6, 0, 0]}>
+                        {flatChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.isOveruse ? '#ef4444' : '#0284c7'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Wing Apportionment Share (4 cols) */}
+            <div className="lg:col-span-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#131B2E] p-6 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="mb-4">
+                  <h3 className="font-display text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-sky-500" />
+                    <span>Wing Apportionment Share</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Distribution of society water volume by building wing
+                  </p>
+                </div>
+
+                <div className="space-y-4 pt-1">
+                  {wingShareData.map((wing) => (
+                    <div key={wing.wing} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-semibold">
+                        <span className="text-slate-800 dark:text-slate-200">
+                          Wing {wing.wing} <span className="text-[11px] text-slate-400 font-normal">({wing.sampleFlats ? `Flats ${wing.sampleFlats}` : ''})</span>
+                        </span>
+                        <span className="font-bold text-sky-600 dark:text-sky-400 font-mono">
+                          {wing.totalKl.toFixed(2)} kL
+                        </span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(100, Math.max(wing.percentage, totalWaterApportionedKl > 0 ? 3 : 0))}%`,
+                            backgroundColor: wing.color,
+                          }}
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-400 text-right">
+                        {wing.percentage.toFixed(1)}% of Total Society Water
+                      </p>
+                    </div>
+                  ))}
+
+                  {wingShareData.length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-6">No wing distribution data available.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom notice box */}
+              <div className="rounded-xl bg-sky-50/80 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/60 p-3.5 flex items-start gap-2.5 mt-6 text-xs text-slate-600 dark:text-slate-300">
+                <Info className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
+                <span>Apportionment ensures each resident only pays for their own meter consumption.</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-semibold px-1">
+            <span>Showing detailed flat-by-flat audit records</span>
+            <span>{paginatedRows.length} of {displayApportionment.length} units listed</span>
           </div>
 
           {/* Detailed Apportionment Table */}

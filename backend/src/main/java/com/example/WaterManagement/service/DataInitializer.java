@@ -589,13 +589,14 @@ public class DataInitializer implements CommandLineRunner {
             }
 
             double runningMeter = baseMeter;
+            List<WaterUsageLog> logsToBatch = new ArrayList<>();
 
-            for (int daysAgo = 30; daysAgo >= 0; daysAgo--) {
+            for (int daysAgo = 365; daysAgo >= 0; daysAgo--) {
                 LocalDate logDate = today.minusDays(daysAgo);
                 Optional<WaterUsageLog> existingLogOpt = waterUsageLogRepository.findByHouseholdIdAndReadingDate(h.getId(), logDate);
 
                 double delta;
-                if (daysAgo == 30) {
+                if (daysAgo == 365) {
                     delta = 0.0;
                 } else if (daysAgo == 1 && h.getFlatNumber().equalsIgnoreCase("B-201")) {
                     // Intentional >3-sigma leak spike (4.85 kL vs mean 0.80 kL)
@@ -619,7 +620,7 @@ public class DataInitializer implements CommandLineRunner {
                         waterUsageLogRepository.save(existingLog);
                     }
                 } else {
-                    waterUsageLogRepository.save(WaterUsageLog.builder()
+                    logsToBatch.add(WaterUsageLog.builder()
                             .household(h)
                             .readingDate(logDate)
                             .meterReadingKl(runningMeter)
@@ -627,6 +628,10 @@ public class DataInitializer implements CommandLineRunner {
                             .source(UsageSource.MANUAL)
                             .build());
                 }
+            }
+
+            if (!logsToBatch.isEmpty()) {
+                waterUsageLogRepository.saveAll(logsToBatch);
             }
         }
     }
