@@ -115,6 +115,14 @@ public class MainAdminController {
         return ResponseEntity.ok(mainAdminService.updateHouseholdStatus(householdId, request.getStatus()));
     }
 
+    @PutMapping("/households/{householdId}")
+    @Operation(summary = "Update Household Information (Platform Admin)", description = "Updates flat number, meter number, resident details, area, occupancy across any community")
+    public ResponseEntity<HouseholdDtos.HouseholdResponse> updateHousehold(
+            @PathVariable Long householdId,
+            @Valid @RequestBody HouseholdDtos.UpdateHouseholdRequest request) {
+        return ResponseEntity.ok(mainAdminService.updateHousehold(householdId, request));
+    }
+
     // ---------------- PLATFORM STATISTICS & ANALYTICS ----------------
 
     @GetMapping("/stats")

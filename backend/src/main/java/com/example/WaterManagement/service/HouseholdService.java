@@ -189,13 +189,14 @@ public class HouseholdService {
         Household household = householdRepository.findById(householdId)
                 .orElseThrow(() -> new ResourceNotFoundException("Household not found with ID: " + householdId));
 
-        if (!household.getApartment().getId().equals(apartmentId)) {
+        if (apartmentId != null && !household.getApartment().getId().equals(apartmentId)) {
             throw new BadRequestException("Household does not belong to your apartment");
         }
 
+        Long targetApartmentId = household.getApartment().getId();
         String newFlatNumber = request.getFlatNumber().trim().toUpperCase();
         if (!household.getFlatNumber().equalsIgnoreCase(newFlatNumber)) {
-            if (householdRepository.existsByApartmentIdAndFlatNumber(apartmentId, newFlatNumber)) {
+            if (householdRepository.existsByApartmentIdAndFlatNumber(targetApartmentId, newFlatNumber)) {
                 throw new BadRequestException("Flat " + newFlatNumber + " already exists in this apartment community");
             }
             household.setFlatNumber(newFlatNumber);

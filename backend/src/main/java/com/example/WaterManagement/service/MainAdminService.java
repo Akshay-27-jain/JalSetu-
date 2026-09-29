@@ -603,6 +603,11 @@ public class MainAdminService {
     }
 
     @Transactional
+    public HouseholdDtos.HouseholdResponse updateHousehold(Long householdId, HouseholdDtos.UpdateHouseholdRequest request) {
+        return householdService.updateHousehold(null, householdId, request);
+    }
+
+    @Transactional
     public void deleteCommunityAdmin(Long adminId) {
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new ResourceNotFoundException("Community Administrator not found with ID: " + adminId));

@@ -98,6 +98,21 @@ export const CommunityAdminsPage: React.FC = () => {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
+  // Household View & Edit Modal for Main Admin
+  const [selectedHousehold, setSelectedHousehold] = useState<PlatformHousehold | null>(null);
+  const [isHouseholdModalOpen, setIsHouseholdModalOpen] = useState(false);
+  const [editHouseholdFlat, setEditHouseholdFlat] = useState('');
+  const [editHouseholdResidentName, setEditHouseholdResidentName] = useState('');
+  const [editHouseholdResidentEmail, setEditHouseholdResidentEmail] = useState('');
+  const [editHouseholdResidentPhone, setEditHouseholdResidentPhone] = useState('');
+  const [editHouseholdMeter, setEditHouseholdMeter] = useState('');
+  const [editHouseholdArea, setEditHouseholdArea] = useState<number>(1200);
+  const [editHouseholdOccupancy, setEditHouseholdOccupancy] = useState<number>(2);
+  const [editHouseholdHasMeter, setEditHouseholdHasMeter] = useState<boolean>(true);
+  const [editHouseholdStatus, setEditHouseholdStatus] = useState<AccountStatus>('ACTIVE');
+  const [savingHousehold, setSavingHousehold] = useState(false);
+  const [householdModalError, setHouseholdModalError] = useState<string | null>(null);
+
   // Onboard New Form State
   const [newAptName, setNewAptName] = useState('');
   const [newAptAddress, setNewAptAddress] = useState('');
@@ -644,6 +659,77 @@ export const CommunityAdminsPage: React.FC = () => {
         (h.meterSerialNumber && h.meterSerialNumber.toLowerCase().includes(term))
       );
     }) || [];
+
+  // Open Household Edit Modal for Main Admin
+  const handleOpenHouseholdModal = (h: PlatformHousehold) => {
+    setSelectedHousehold(h);
+    setEditHouseholdFlat(h.flatNumber);
+    setEditHouseholdResidentName(h.residentName !== 'Vacant / Unregistered' ? h.residentName : '');
+    setEditHouseholdResidentEmail(h.residentEmail !== 'N/A' ? h.residentEmail : '');
+    setEditHouseholdResidentPhone(h.residentPhone || '');
+    setEditHouseholdMeter(h.meterSerialNumber || '');
+    setEditHouseholdArea(h.areaSqft || 1200);
+    setEditHouseholdOccupancy(h.occupancyCount || 2);
+    setEditHouseholdHasMeter(h.hasMeter ?? true);
+    setEditHouseholdStatus(h.status || 'ACTIVE');
+    setHouseholdModalError(null);
+    setIsHouseholdModalOpen(true);
+  };
+
+  // Save Household Changes (Platform Main Admin)
+  const handleSaveHousehold = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedHousehold) return;
+    if (!editHouseholdFlat.trim()) {
+      setHouseholdModalError('Flat number is required');
+      return;
+    }
+
+    try {
+      setSavingHousehold(true);
+      setHouseholdModalError(null);
+
+      await mainAdminApi.updateHousehold(selectedHousehold.id, {
+        flatNumber: editHouseholdFlat.trim(),
+        meterSerialNumber: editHouseholdMeter.trim() || undefined,
+        areaSqft: Number(editHouseholdArea),
+        occupancyCount: Number(editHouseholdOccupancy),
+        hasMeter: editHouseholdHasMeter,
+        status: editHouseholdStatus,
+        residentFullName: editHouseholdResidentName.trim() || undefined,
+        residentEmail: editHouseholdResidentEmail.trim() || undefined,
+        residentPhone: editHouseholdResidentPhone.trim() || undefined,
+      });
+
+      // Update state locally
+      setAllHouseholds((prev) =>
+        prev.map((item) =>
+          item.id === selectedHousehold.id
+            ? {
+                ...item,
+                flatNumber: editHouseholdFlat.trim(),
+                meterSerialNumber: editHouseholdMeter.trim() || undefined,
+                areaSqft: Number(editHouseholdArea),
+                occupancyCount: Number(editHouseholdOccupancy),
+                hasMeter: editHouseholdHasMeter,
+                status: editHouseholdStatus,
+                residentName: editHouseholdResidentName.trim() || 'Vacant / Unregistered',
+                residentEmail: editHouseholdResidentEmail.trim() || 'N/A',
+                residentPhone: editHouseholdResidentPhone.trim() || undefined,
+              }
+            : item
+        )
+      );
+
+      setSuccessMessage(`Successfully updated Flat ${editHouseholdFlat} in ${selectedHousehold.apartmentName}!`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+      setIsHouseholdModalOpen(false);
+    } catch (err) {
+      setHouseholdModalError(extractErrorMessage(err));
+    } finally {
+      setSavingHousehold(false);
+    }
+  };
 
   // Export Residents to CSV
   const handleExportResidentsCsv = () => {
@@ -1592,7 +1678,8 @@ export const CommunityAdminsPage: React.FC = () => {
                       <th className="py-3.5 px-4 min-w-[140px]">Occupancy & Area</th>
                       <th className="py-3.5 px-4 min-w-[120px]">Current Usage</th>
                       <th className="py-3.5 px-4 min-w-[130px]">Account Status</th>
-                      <th className="py-3.5 pl-4 pr-6 min-w-[130px] text-right">Invite Code</th>
+                      <th className="py-3.5 pl-4 pr-3 min-w-[110px]">Invite Code</th>
+                      <th className="py-3.5 pl-3 pr-6 min-w-[120px] text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
@@ -1673,10 +1760,22 @@ export const CommunityAdminsPage: React.FC = () => {
                           </select>
                         </td>
 
-                        <td className="py-3.5 pl-4 pr-6 text-right font-mono text-[10px] text-slate-500">
+                        <td className="py-3.5 pl-4 pr-3 font-mono text-[10px] text-slate-500">
                           <span className="bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
                             {h.inviteCode}
                           </span>
+                        </td>
+
+                        <td className="py-3.5 pl-3 pr-6 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenHouseholdModal(h)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 dark:border-brand-800 bg-brand-50/80 dark:bg-brand-950/60 px-2.5 py-1.5 text-[11px] font-bold text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/60 transition-all cursor-pointer shadow-2xs"
+                            title="View full details and edit flat information"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                            <span>Edit Info</span>
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -2855,6 +2954,209 @@ export const CommunityAdminsPage: React.FC = () => {
               >
                 <XCircle className="h-4 w-4" />
                 <span>{reviewSubmitting ? 'Submitting...' : 'Confirm Rejection'}</span>
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* ---------------- 7. MAIN ADMIN HOUSEHOLD VIEW & EDIT MODAL ---------------- */}
+      <Modal
+        isOpen={isHouseholdModalOpen}
+        onClose={() => setIsHouseholdModalOpen(false)}
+        title={selectedHousehold ? `Manage Flat ${selectedHousehold.flatNumber} (${selectedHousehold.apartmentName})` : 'Manage Household'}
+        subtitle="View and update flat specifications, smart meter binding, resident contact info, and status"
+        maxWidth="max-w-2xl"
+      >
+        {selectedHousehold && (
+          <form onSubmit={handleSaveHousehold} className="space-y-5">
+            {householdModalError && (
+              <div className="flex items-center gap-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 p-3 text-xs text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-rose-500" />
+                <span>{householdModalError}</span>
+              </div>
+            )}
+
+            {/* Quick Telemetry Cards */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3">
+                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Current Usage</p>
+                <p className="text-base font-extrabold text-brand-700 dark:text-brand-400 mt-0.5">
+                  {selectedHousehold.currentMonthConsumptionKl || 0} <span className="text-xs font-normal">kL</span>
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3">
+                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Latest Meter Reading</p>
+                <p className="text-base font-extrabold text-slate-900 dark:text-white mt-0.5">
+                  {selectedHousehold.latestReadingKl || 0} <span className="text-xs font-normal">kL</span>
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-3">
+                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Resident Invite Code</p>
+                <p className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300 mt-1 truncate">
+                  {selectedHousehold.inviteCode}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Flat / Unit Number <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editHouseholdFlat}
+                    onChange={(e) => setEditHouseholdFlat(e.target.value)}
+                    placeholder="e.g. A-101"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Account Status
+                  </label>
+                  <select
+                    value={editHouseholdStatus}
+                    onChange={(e) => setEditHouseholdStatus(e.target.value as AccountStatus)}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-brand-500 cursor-pointer"
+                  >
+                    <option value="ACTIVE">Active (Billing & App Access)</option>
+                    <option value="INACTIVE">Inactive</option>
+                    <option value="BLOCKED">Blocked</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Resident Contact Information */}
+              <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 p-4 space-y-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Assigned Resident Contact Details
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Resident Full Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editHouseholdResidentName}
+                      onChange={(e) => setEditHouseholdResidentName(e.target.value)}
+                      placeholder="e.g. Vikram Malhotra"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Resident Email
+                    </label>
+                    <input
+                      type="email"
+                      value={editHouseholdResidentEmail}
+                      onChange={(e) => setEditHouseholdResidentEmail(e.target.value)}
+                      placeholder="e.g. resident@society.com"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-brand-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={editHouseholdResidentPhone}
+                      onChange={(e) => setEditHouseholdResidentPhone(e.target.value)}
+                      placeholder="e.g. +91 98765 43210"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-brand-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Meter & Specifications */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Smart Meter Serial No
+                  </label>
+                  <input
+                    type="text"
+                    value={editHouseholdMeter}
+                    onChange={(e) => setEditHouseholdMeter(e.target.value)}
+                    placeholder="e.g. MTR-PM-101"
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-brand-700 dark:text-brand-300 outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Area (Sq. Ft)
+                  </label>
+                  <input
+                    type="number"
+                    min="100"
+                    max="20000"
+                    value={editHouseholdArea}
+                    onChange={(e) => setEditHouseholdArea(Number(e.target.value))}
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Occupancy (Persons)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={editHouseholdOccupancy}
+                    onChange={(e) => setEditHouseholdOccupancy(Number(e.target.value))}
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-brand-500"
+                  />
+                </div>
+              </div>
+
+              {/* Has Meter Toggle */}
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 p-3">
+                <div>
+                  <p className="text-xs font-bold text-slate-800 dark:text-white">Individual Meter Installed</p>
+                  <p className="text-[11px] text-slate-400">If unchecked, this flat is billed on shared/apportioned allocation.</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={editHouseholdHasMeter}
+                  onChange={(e) => setEditHouseholdHasMeter(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsHouseholdModalOpen(false)}
+                className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingHousehold}
+                className="flex items-center gap-1.5 rounded-xl bg-brand-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-brand-700 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+              >
+                {savingHousehold ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    <span>Save Changes</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

@@ -261,6 +261,23 @@ export const mainAdminApi = {
     const res = await api.put<{ message: string; status: AccountStatus }>(`/main-admin/households/${householdId}/status`, { status });
     return res.data;
   },
+  updateHousehold: async (
+    householdId: number,
+    data: {
+      flatNumber: string;
+      meterSerialNumber?: string;
+      areaSqft?: number;
+      occupancyCount?: number;
+      hasMeter?: boolean;
+      status?: AccountStatus;
+      residentFullName?: string;
+      residentEmail?: string;
+      residentPhone?: string;
+    }
+  ): Promise<Household> => {
+    const res = await api.put<Household>(`/main-admin/households/${householdId}`, data);
+    return res.data;
+  },
   getPlatformAnalytics: async (): Promise<PlatformAnalytics> => {
     const res = await api.get<PlatformAnalytics>('/main-admin/reports/analytics');
     return res.data;

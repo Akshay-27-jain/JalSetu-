@@ -366,9 +366,9 @@ export const MainAdminReportsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="h-64 w-full">
+              <div className="h-80 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <AreaChart data={trendChartData} margin={{ top: 15, right: 15, left: 10, bottom: 20 }}>
                     <defs>
                       <linearGradient id="mainWaterGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#0284c7" stopOpacity={0.4} />
@@ -377,8 +377,27 @@ export const MainAdminReportsPage: React.FC = () => {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} unit=" kL" />
-                    <Tooltip />
+                    <YAxis width={65} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} unit=" kL" />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const val = Number(payload[0].value) || 0;
+                          return (
+                            <div className="rounded-xl border border-slate-200/90 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 shadow-xl text-xs">
+                              <p className="font-bold text-slate-800 dark:text-white mb-1">Month: {label}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="h-2.5 w-2.5 rounded-full bg-brand-500 shadow-xs" />
+                                <span className="text-slate-500 dark:text-slate-400">Total Consumption:</span>
+                                <span className="font-mono font-bold text-brand-600 dark:text-brand-400">
+                                  {val.toLocaleString()} kL
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
                     <Area type="monotone" name="Total Consumption (kL)" dataKey="consumption" stroke="#0284c7" strokeWidth={3} fill="url(#mainWaterGrad)" />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -394,14 +413,59 @@ export const MainAdminReportsPage: React.FC = () => {
                 Comparison of current monthly water consumption across all registered societies ({societyComparisonChartData.length} societies)
               </p>
 
-              <div className="h-64 w-full">
+              <div className="h-80 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={societyComparisonChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <BarChart data={societyComparisonChartData} margin={{ top: 15, right: 15, left: 10, bottom: 45 }}>
+                    <defs>
+                      <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#0284c7" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#38bdf8" stopOpacity={0.7} />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} unit=" kL" />
-                    <Tooltip />
-                    <Bar dataKey="consumption" name="Consumption (kL)" fill="#0284c7" radius={[6, 6, 0, 0]} />
+                    <XAxis
+                      dataKey="name"
+                      interval={0}
+                      angle={-25}
+                      textAnchor="end"
+                      height={55}
+                      tick={{ fontSize: 10, fill: '#64748b' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      width={65}
+                      tick={{ fontSize: 11, fill: '#64748b' }}
+                      axisLine={false}
+                      tickLine={false}
+                      unit=" kL"
+                    />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const val = Number(payload[0].value) || 0;
+                          return (
+                            <div className="rounded-xl border border-slate-200/90 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 shadow-xl text-xs">
+                              <p className="font-bold text-slate-800 dark:text-white mb-1">{label}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="h-2.5 w-2.5 rounded-full bg-brand-500 shadow-xs" />
+                                <span className="text-slate-500 dark:text-slate-400">Consumption:</span>
+                                <span className="font-mono font-bold text-brand-600 dark:text-brand-400">
+                                  {val.toLocaleString()} kL
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar
+                      dataKey="consumption"
+                      name="Consumption (kL)"
+                      fill="url(#barGradient)"
+                      radius={[6, 6, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -421,13 +485,33 @@ export const MainAdminReportsPage: React.FC = () => {
               Historical platform billing and payment realization efficiency across all cycles
             </p>
 
-            <div className="h-72 w-full">
+            <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={trendChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <BarChart data={trendChartData} margin={{ top: 15, right: 15, left: 15, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
                   <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} unit=" ₹" />
-                  <Tooltip />
+                  <YAxis width={70} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} unit=" ₹" />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="rounded-xl border border-slate-200/90 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 shadow-xl text-xs space-y-1">
+                            <p className="font-bold text-slate-800 dark:text-white mb-1">Billing Cycle: {label}</p>
+                            {payload.map((entry, idx) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                                <span className="text-slate-500 dark:text-slate-400">{entry.name}:</span>
+                                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                                  ₹{Number(entry.value).toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
                   <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '12px' }} />
                   <Bar dataKey="billed" name="Billed Revenue (₹)" fill="#0284c7" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="collected" name="Collected Revenue (₹)" fill="#10b981" radius={[4, 4, 0, 0]} />

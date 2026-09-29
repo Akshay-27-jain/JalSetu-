@@ -507,36 +507,7 @@ export const RegisterPage: React.FC = () => {
               <span>3. Mandatory Verification Documents (All 3 Required)</span>
             </h4>
 
-            {/* Quick 1-Click Test Document Buttons */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                type="button"
-                onClick={() => loadTestDocuments('authentic')}
-                className="px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] transition-all cursor-pointer shadow-2xs flex items-center gap-1"
-                title="Auto-fill genuine government registered deed, Aadhaar card, and RWA resolution"
-              >
-                <Sparkles className="h-2.5 w-2.5" />
-                <span>Test Authentic Set 🟢</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => loadTestDocuments('fake')}
-                className="px-2 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] transition-all cursor-pointer shadow-2xs flex items-center gap-1"
-                title="Auto-fill watermarked fake/sample placeholder documents to test AI fraud detection"
-              >
-                <Sparkles className="h-2.5 w-2.5" />
-                <span>Test Fake Demo Set 🔴</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => loadTestDocuments('duplicate')}
-                className="px-2 py-0.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10px] transition-all cursor-pointer shadow-2xs flex items-center gap-1"
-                title="Auto-fill identical documents across all 3 slots to test duplicate document detection"
-              >
-                <Sparkles className="h-2.5 w-2.5" />
-                <span>Test Duplicate Set ⚠️</span>
-              </button>
-            </div>
+
           </div>
 
           {/* Document 1 Card */}
