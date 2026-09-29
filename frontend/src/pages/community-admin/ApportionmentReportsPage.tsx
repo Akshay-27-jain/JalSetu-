@@ -768,143 +768,169 @@ export const ApportionmentReportsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* 2-Column Dashboard (Flat-by-Flat Bar Chart + Wing Apportionment Share) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left: Flat-by-Flat Bar Chart (8 cols) */}
-            <div className="lg:col-span-8 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#131B2E] p-6 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-                <div>
-                  <h3 className="font-display text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-sky-500" />
-                    <span>Flat-by-Flat Water Consumption (kL)</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Individual household metered water volume for fair apportionment
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-4 text-xs font-semibold">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7]"></span>
-                    <span className="text-slate-600 dark:text-slate-300">Standard Usage</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]"></span>
-                    <span className="text-slate-600 dark:text-slate-300">Overuse Slab</span>
-                  </div>
-                </div>
+          {/* 1. Flat-by-Flat Water Consumption Bar Chart (Full Width) */}
+          <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#131B2E] p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+              <div>
+                <h3 className="font-display text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-sky-500" />
+                  <span>Flat-by-Flat Water Consumption (kL)</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Individual household metered water volume for fair apportionment
+                </p>
               </div>
 
-              {flatChartData.length === 0 ? (
-                <div className="h-72 flex flex-col items-center justify-center text-slate-400 text-xs">
-                  <Droplets className="w-8 h-8 mb-2 opacity-40 text-sky-400" />
-                  <p>No metered usage logs found for this filter combination.</p>
-                  <p className="text-[11px] text-slate-500 mt-1">Try selecting a different date period or clearing your search term.</p>
+              <div className="flex items-center gap-4 text-xs font-semibold">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7]"></span>
+                  <span className="text-slate-600 dark:text-slate-300">Standard Usage</span>
                 </div>
-              ) : (
-                <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={flatChartData} barCategoryGap="20%" margin={{ top: 15, right: 15, left: -15, bottom: 25 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.6} />
-                      <XAxis
-                        dataKey="flat"
-                        angle={flatChartData.length > 4 ? -25 : 0}
-                        textAnchor={flatChartData.length > 4 ? "end" : "middle"}
-                        interval={0}
-                        tick={{ fontSize: 11, fill: '#64748b' }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 11, fill: '#64748b' }}
-                        axisLine={false}
-                        tickLine={false}
-                        unit=" kL"
-                      />
-                      <Tooltip
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            const data = payload[0].payload;
-                            return (
-                              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 p-3 text-xs shadow-xl backdrop-blur-md space-y-1">
-                                <p className="font-bold text-slate-900 dark:text-white text-sm">{data.flat}</p>
-                                <p className="text-slate-500 dark:text-slate-400">Resident: <strong className="text-slate-700 dark:text-slate-300">{data.resident}</strong></p>
-                                <p className="text-slate-500 dark:text-slate-400">Meter Serial: <strong className="font-mono text-slate-700 dark:text-slate-300">{data.meter}</strong></p>
-                                <div className="pt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
-                                  <span className="font-bold text-sky-600 dark:text-sky-400">{data.consumption} kL ({data.liters.toLocaleString()} L)</span>
-                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                                    data.isOveruse ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300' : 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
-                                  }`}>
-                                    {data.isOveruse ? 'Overuse Slab' : 'Standard Usage'}
-                                  </span>
-                                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444]"></span>
+                  <span className="text-slate-600 dark:text-slate-300">Overuse Slab</span>
+                </div>
+              </div>
+            </div>
+
+            {flatChartData.length === 0 ? (
+              <div className="h-72 flex flex-col items-center justify-center text-slate-400 text-xs">
+                <Droplets className="w-8 h-8 mb-2 opacity-40 text-sky-400" />
+                <p>No metered usage logs found for this filter combination.</p>
+                <p className="text-[11px] text-slate-500 mt-1">Try selecting a different date period or clearing your search term.</p>
+              </div>
+            ) : (
+              <div className="h-72 sm:h-80 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={flatChartData} barCategoryGap="20%" margin={{ top: 15, right: 15, left: -15, bottom: 25 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.6} />
+                    <XAxis
+                      dataKey="flat"
+                      angle={flatChartData.length > 5 ? -25 : 0}
+                      textAnchor={flatChartData.length > 5 ? "end" : "middle"}
+                      interval={0}
+                      tick={{ fontSize: 11, fill: '#64748b' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: '#64748b' }}
+                      axisLine={false}
+                      tickLine={false}
+                      unit=" kL"
+                    />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 p-3 text-xs shadow-xl backdrop-blur-md space-y-1">
+                              <p className="font-bold text-slate-900 dark:text-white text-sm">{data.flat}</p>
+                              <p className="text-slate-500 dark:text-slate-400">Resident: <strong className="text-slate-700 dark:text-slate-300">{data.resident}</strong></p>
+                              <p className="text-slate-500 dark:text-slate-400">Meter Serial: <strong className="font-mono text-slate-700 dark:text-slate-300">{data.meter}</strong></p>
+                              <div className="pt-1 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+                                <span className="font-bold text-sky-600 dark:text-sky-400">{data.consumption} kL ({data.liters.toLocaleString()} L)</span>
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                  data.isOveruse ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300' : 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
+                                }`}>
+                                  {data.isOveruse ? 'Overuse Slab' : 'Standard Usage'}
+                                </span>
                               </div>
-                            );
-                          }
-                          return null;
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="consumption" maxBarSize={48} radius={[6, 6, 0, 0]}>
+                      {flatChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.isOveruse ? '#ef4444' : '#0284c7'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          {/* 2. Wing Apportionment Share (Moved DOWN below chart) */}
+          <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#131B2E] p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+              <div>
+                <h3 className="font-display text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-sky-500" />
+                  <span>Wing Apportionment Share</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Distribution of society water volume and cost allocation across all building wings
+                </p>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-100 dark:border-sky-900/40 w-fit">
+                {wingShareData.length} Active Wings
+              </span>
+            </div>
+
+            {/* Responsive grid of Wing cards — no scrollbar needed */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {wingShareData.map((wing) => (
+                <div
+                  key={wing.wing}
+                  className="rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/50 p-4 flex flex-col justify-between hover:shadow-xs transition-shadow"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span
+                        className="px-2.5 py-1 rounded-md text-xs font-bold text-white shadow-2xs"
+                        style={{ backgroundColor: wing.color }}
+                      >
+                        Wing {wing.wing}
+                      </span>
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        {wing.percentage.toFixed(1)}%
+                      </span>
+                    </div>
+
+                    <div className="mt-2">
+                      <div className="text-lg font-extrabold text-slate-900 dark:text-white font-mono">
+                        {wing.totalKl.toFixed(2)} <span className="text-xs font-normal text-slate-400">kL</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {Math.round(wing.totalKl * 1000).toLocaleString()} Liters
+                      </p>
+                    </div>
+
+                    {wing.sampleFlats && (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 truncate" title={wing.sampleFlats}>
+                        Flats: {wing.sampleFlats}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-slate-200/60 dark:border-slate-800">
+                    <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${Math.min(100, Math.max(wing.percentage, totalWaterApportionedKl > 0 ? 3 : 0))}%`,
+                          backgroundColor: wing.color,
                         }}
                       />
-                      <Bar dataKey="consumption" maxBarSize={44} radius={[6, 6, 0, 0]}>
-                        {flatChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.isOveruse ? '#ef4444' : '#0284c7'} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {wingShareData.length === 0 && (
+                <div className="col-span-full py-8 text-center text-xs text-slate-400">
+                  No wing distribution data available.
                 </div>
               )}
             </div>
 
-            {/* Right: Wing Apportionment Share (4 cols) */}
-            <div className="lg:col-span-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#131B2E] p-5 sm:p-6 shadow-sm flex flex-col justify-between">
-              <div>
-                <div className="mb-4">
-                  <h3 className="font-display text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-sky-500" />
-                    <span>Wing Apportionment Share</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Distribution of society water volume by building wing
-                  </p>
-                </div>
-
-                <div className="space-y-3 pt-1 max-h-[290px] overflow-y-auto pr-1">
-                  {wingShareData.map((wing) => (
-                    <div key={wing.wing} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs font-semibold">
-                        <span className="text-slate-800 dark:text-slate-200">
-                          Wing {wing.wing} <span className="text-[11px] text-slate-400 font-normal">({wing.sampleFlats ? `Flats ${wing.sampleFlats}` : ''})</span>
-                        </span>
-                        <span className="font-bold text-sky-600 dark:text-sky-400 font-mono">
-                          {wing.totalKl.toFixed(2)} kL
-                        </span>
-                      </div>
-                      <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${Math.min(100, Math.max(wing.percentage, totalWaterApportionedKl > 0 ? 3 : 0))}%`,
-                            backgroundColor: wing.color,
-                          }}
-                        />
-                      </div>
-                      <p className="text-[11px] text-slate-400 text-right">
-                        {wing.percentage.toFixed(1)}% of Total Society Water
-                      </p>
-                    </div>
-                  ))}
-
-                  {wingShareData.length === 0 && (
-                    <p className="text-xs text-slate-400 text-center py-6">No wing distribution data available.</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Bottom notice box */}
-              <div className="rounded-xl bg-sky-50/80 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/60 p-3.5 flex items-start gap-2.5 mt-6 text-xs text-slate-600 dark:text-slate-300">
-                <Info className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
-                <span>Apportionment ensures each resident only pays for their own meter consumption.</span>
-              </div>
+            {/* Bottom notice box */}
+            <div className="rounded-xl bg-sky-50/80 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/60 p-3.5 flex items-start gap-2.5 mt-5 text-xs text-slate-600 dark:text-slate-300">
+              <Info className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
+              <span>Apportionment ensures each resident only pays for their own meter consumption without flat-rate cross-subsidization.</span>
             </div>
           </div>
 

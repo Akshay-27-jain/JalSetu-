@@ -37,8 +37,8 @@ export function Hero() {
           alt="Water Background"
           className="h-full w-full object-cover scale-105"
         />
-        {/* Cinematic underwater sunlight: preserve vibrant turquoise sunbeams while maintaining high text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 via-transparent to-slate-950/65" />
+        {/* Cinematic underwater sunlight: crystal clear ripples & sunbeams with gentle vignette for crisp text contrast */}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/20 via-transparent to-slate-950/60" />
       </div>
 
       {/* Content Container — Centered vertically within full viewport */}
