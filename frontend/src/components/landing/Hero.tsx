@@ -4,7 +4,7 @@ import { ArrowRight, Droplets, CheckCircle2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { PwaInstallButton } from '../PwaInstallButton';
 import { gsap } from 'gsap';
-import landingBgImg from '../../assets/landing-bg.png';
+import landingBgImg from '../../assets/landing-bg.jpg';
 
 export function Hero() {
   const headlineRef = useRef<HTMLDivElement>(null);
@@ -37,10 +37,8 @@ export function Hero() {
           alt="Water Background"
           className="h-full w-full object-cover scale-105"
         />
-        {/* Cinematic dark tint with brand vignette for maximum readability */}
-        <div className="absolute inset-0 bg-slate-950/70" />
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/85 via-slate-950/65 to-slate-950/90" />
-        <div className="absolute inset-0 bg-radial-at-c from-transparent via-slate-950/40 to-slate-950/80" />
+        {/* Cinematic underwater sunlight: preserve vibrant turquoise sunbeams while maintaining high text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 via-transparent to-slate-950/65" />
       </div>
 
       {/* Content Container — Centered vertically within full viewport */}
