@@ -25,10 +25,10 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
+    private final EmailService emailService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        // 1. Check if username or email already exists
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new IllegalArgumentException("Username is already taken: " + request.getUsername());
         }
@@ -36,31 +36,32 @@ public class AuthService {
             throw new IllegalArgumentException("Email is already registered: " + request.getEmail());
         }
 
-        // Determine role (default to APARTMENT_ADMIN for new registration signups)
-        User.Role role = request.getRole() != null ? request.getRole() : User.Role.APARTMENT_ADMIN;
+        // Default to APARTMENT_ADMIN for new registration signups.
+        // MAIN_ADMIN cannot be self-assigned through the public register endpoint for security.
+        User.Role role = request.getRole();
+        if (role == null || role == User.Role.MAIN_ADMIN) {
+            role = User.Role.APARTMENT_ADMIN;
+        }
 
-        // 2. Resolve or create apartment for admin
         Apartment apartment = null;
         if (request.getApartmentId() != null) {
             apartment = apartmentRepository.findById(request.getApartmentId()).orElse(null);
         }
 
         if (apartment == null) {
-            apartment = apartmentRepository.findAll().stream().findFirst().orElse(null);
-            if (apartment == null) {
-                Apartment newApt = new Apartment();
-                String aptName = (request.getApartmentName() != null && !request.getApartmentName().isBlank())
-                        ? request.getApartmentName()
-                        : "Palm Meadows Society";
-                newApt.setName(aptName);
-                newApt.setCity("Bengaluru");
-                newApt.setState("Karnataka");
-                newApt.setTotalUnits(50);
-                apartment = apartmentRepository.save(newApt);
-            }
+            String aptName = (request.getApartmentName() != null && !request.getApartmentName().isBlank())
+                    ? request.getApartmentName().trim()
+                    : "New Apartment Society";
+            
+            Apartment newApt = new Apartment();
+            newApt.setName(aptName);
+            newApt.setAddress(request.getSocietyAddress() != null ? request.getSocietyAddress().trim() : "Main Road");
+            newApt.setCity(request.getCity() != null ? request.getCity().trim() : "Bengaluru");
+            newApt.setState(request.getState() != null ? request.getState().trim() : "Karnataka");
+            newApt.setTotalUnits(request.getTotalUnits() != null ? request.getTotalUnits() : 50);
+            apartment = apartmentRepository.save(newApt);
         }
 
-        // 3. Resolve household if provided
         Household household = null;
         if (request.getHouseholdId() != null) {
             household = householdRepository.findById(request.getHouseholdId()).orElse(null);
@@ -69,21 +70,52 @@ public class AuthService {
             }
         }
 
-        // 4. Create User entity
         User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
+        user.setUsername(request.getUsername().trim());
+        user.setEmail(request.getEmail().trim().toLowerCase());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setFullName(request.getFullName());
+        user.setFullName(request.getFullName().trim());
         user.setPhone(request.getPhone());
         user.setRole(role);
         user.setApartment(apartment);
         user.setHousehold(household);
-        user.setIsActive(true);
+
+        // Document submission handling
+        user.setDocumentBond(request.getDocumentBond());
+        user.setDocumentCertificate(request.getDocumentCertificate());
+        user.setDocumentIdProof(request.getDocumentIdProof());
+        user.setDocumentNotes(request.getDocumentNotes());
+
+        boolean isAptAdmin = (role == User.Role.APARTMENT_ADMIN);
+        if (isAptAdmin) {
+            user.setApprovalStatus(User.ApprovalStatus.PENDING);
+            user.setIsActive(false); // Pending verification by Main Admin
+        } else {
+            user.setApprovalStatus(User.ApprovalStatus.APPROVED);
+            user.setIsActive(true);
+        }
 
         User savedUser = userRepository.save(user);
 
-        // 5. Generate JWT token
+        // If apartment admin, send submission receipt acknowledgement
+        if (isAptAdmin) {
+            String aptName = savedUser.getApartment() != null ? savedUser.getApartment().getName() : "Society";
+            emailService.sendAdminRegistrationSubmitted(savedUser.getEmail(), savedUser.getFullName(), aptName);
+
+            return AuthResponse.builder()
+                    .token(null)
+                    .id(savedUser.getId())
+                    .username(savedUser.getUsername())
+                    .email(savedUser.getEmail())
+                    .fullName(savedUser.getFullName())
+                    .role(savedUser.getRole())
+                    .apartmentId(savedUser.getApartment() != null ? savedUser.getApartment().getId() : null)
+                    .apartmentName(aptName)
+                    .approvalStatus(User.ApprovalStatus.PENDING)
+                    .message("Application submitted successfully with documents. Your account is pending Main Admin verification.")
+                    .build();
+        }
+
         Long aptId = savedUser.getApartment() != null ? savedUser.getApartment().getId() : null;
         String token = jwtUtils.generateToken(savedUser.getUsername(), savedUser.getRole().name(), aptId);
 
@@ -99,20 +131,32 @@ public class AuthService {
                 .apartmentName(savedUser.getApartment() != null ? savedUser.getApartment().getName() : null)
                 .householdId(savedUser.getHousehold() != null ? savedUser.getHousehold().getId() : null)
                 .householdUnitNumber(savedUser.getHousehold() != null ? savedUser.getHousehold().getUnitNumber() : null)
+                .householdBlock(savedUser.getHousehold() != null ? savedUser.getHousehold().getBlock() : null)
+                .approvalStatus(User.ApprovalStatus.APPROVED)
                 .build();
     }
 
     public AuthResponse login(LoginRequest request) {
-        // 1. Authenticate with Spring Security's AuthenticationManager
+        User user = userRepository.findByUsername(request.getUsername())
+                .or(() -> userRepository.findByEmail(request.getUsername()))
+                .orElseThrow(() -> new IllegalArgumentException("Invalid username or password."));
+
+        if (user.getRole() == User.Role.APARTMENT_ADMIN && user.getApprovalStatus() == User.ApprovalStatus.PENDING) {
+            throw new IllegalArgumentException("Your Apartment Admin account is currently PENDING Main Admin verification. Submitted documents are under review. You will receive an email once approved.");
+        }
+
+        if (user.getRole() == User.Role.APARTMENT_ADMIN && user.getApprovalStatus() == User.ApprovalStatus.REJECTED) {
+            throw new IllegalArgumentException("Your application was rejected: " + (user.getRejectionReason() != null ? user.getRejectionReason() : "Please contact Main Admin."));
+        }
+
+        if (Boolean.FALSE.equals(user.getIsActive())) {
+            throw new IllegalArgumentException("Account is currently inactive or suspended. Please contact administrator.");
+        }
+
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(user.getUsername(), request.getPassword())
         );
 
-        // 2. Fetch user
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + request.getUsername()));
-
-        // 3. Generate token
         Long aptId = user.getApartment() != null ? user.getApartment().getId() : null;
         String token = jwtUtils.generateToken(user.getUsername(), user.getRole().name(), aptId);
 
@@ -128,6 +172,8 @@ public class AuthService {
                 .apartmentName(user.getApartment() != null ? user.getApartment().getName() : null)
                 .householdId(user.getHousehold() != null ? user.getHousehold().getId() : null)
                 .householdUnitNumber(user.getHousehold() != null ? user.getHousehold().getUnitNumber() : null)
+                .householdBlock(user.getHousehold() != null ? user.getHousehold().getBlock() : null)
+                .approvalStatus(user.getApprovalStatus())
                 .build();
     }
 

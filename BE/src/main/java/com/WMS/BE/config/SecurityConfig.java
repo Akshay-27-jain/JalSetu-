@@ -32,33 +32,27 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Enable CORS with our config
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            // Disable CSRF (stateless JWT, no sessions)
             .csrf(csrf -> csrf.disable())
-            // Stateless session — no server-side session
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-            // Authorization rules
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints — no token needed
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/ai/**").permitAll()
+                .requestMatchers("/api/admin/notifications/**").permitAll()
+                .requestMatchers("/api/superadmin/**").hasRole("MAIN_ADMIN")
+                .requestMatchers("/api/admin/**").hasAnyRole("APARTMENT_ADMIN", "MAIN_ADMIN")
 
-                // Admin-only write operations
-                .requestMatchers("/api/admin/**").hasRole("APARTMENT_ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/apartments/**").hasRole("APARTMENT_ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/apartments/**").hasRole("APARTMENT_ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/apartments/**").hasRole("APARTMENT_ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/households/**").hasRole("APARTMENT_ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/households/**").hasRole("APARTMENT_ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/households/**").hasRole("APARTMENT_ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/water-usage/**").hasRole("APARTMENT_ADMIN")
-
-                // Everything else requires authentication
+                .requestMatchers(HttpMethod.POST, "/api/apartments/**").hasAnyRole("APARTMENT_ADMIN", "MAIN_ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/apartments/**").hasAnyRole("APARTMENT_ADMIN", "MAIN_ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/apartments/**").hasAnyRole("APARTMENT_ADMIN", "MAIN_ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/households/**").hasAnyRole("APARTMENT_ADMIN", "MAIN_ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/households/**").hasAnyRole("APARTMENT_ADMIN", "MAIN_ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/households/**").hasAnyRole("APARTMENT_ADMIN", "MAIN_ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/water-usage/**").hasAnyRole("APARTMENT_ADMIN", "MAIN_ADMIN")
                 .anyRequest().authenticated()
             )
-            // Register JWT filter before Spring's default auth filter
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

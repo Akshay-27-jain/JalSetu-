@@ -1,4 +1,3 @@
-// DROP REST API Client
 
 const BASE_URL = "http://localhost:8080/api";
 
@@ -99,5 +98,69 @@ export const adminResidentApi = {
   checkEmail: async (email) => request(`/admin/residents/check-email?email=${encodeURIComponent(email)}`),
   getResidents: async (apartmentId) => request(`/admin/residents?apartmentId=${apartmentId}`),
   resendCredentials: async (id) => request(`/admin/residents/${id}/resend-credentials`, { method: "POST" }),
+};
+
+export const aiApi = {
+  chat: async (payload) => {
+    return request("/ai/chat", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+};
+
+export const notificationApi = {
+  testEmail: async (email) => {
+    return request("/admin/notifications/test-email", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+  sendCredentials: async (payload) => {
+    return request("/admin/notifications/send-credentials", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  sendAdminApproval: async (payload) => {
+    return request("/admin/notifications/send-admin-approval", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  sendAdminRegistrationSubmitted: async (payload) => {
+    return request("/admin/notifications/send-admin-registration-submitted", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  sendBill: async (payload) => {
+    return request("/admin/notifications/send-bill", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  sendReminder: async (payload) => {
+    return request("/admin/notifications/send-reminder", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  sendLeakAlert: async (payload) => {
+    return request("/admin/notifications/send-leak-alert", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+};
+
+export const superAdminApi = {
+  getStats: async () => request("/superadmin/stats"),
+  getPendingAdmins: async () => request("/superadmin/pending-admins"),
+  getAllAdmins: async () => request("/superadmin/all-admins"),
+  getAllResidents: async () => request("/superadmin/all-residents"),
+  getAllApartments: async () => request("/superadmin/all-apartments"),
+  approveAdmin: async (id) => request(`/superadmin/approve-admin/${id}`, { method: "POST" }),
+  rejectAdmin: async (id, reason) => request(`/superadmin/reject-admin/${id}`, { method: "POST", body: JSON.stringify({ reason }) }),
 };
 
