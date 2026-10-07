@@ -6,7 +6,7 @@ import { Modal } from '../../components/Modal';
 import { Badge } from '../../components/Badge';
 import { EmptyState } from '../../components/EmptyState';
 import { SkeletonTable } from '../../components/SkeletonLoader';
-import { Building2, Users, Droplets, ShieldCheck, Plus, Search, Mail, MapPin, CheckCircle2, AlertCircle, ArrowRight, UserCheck } from 'lucide-react';
+import { Building2, Users, Droplets, ShieldCheck, Plus, Search, Mail, MapPin, CheckCircle2, AlertCircle, ArrowRight, UserCheck, FileText, UploadCloud, Bot, Phone } from 'lucide-react';
 import type { Apartment, MainAdminStats } from '../../types';
 
 export const MainAdminDashboard: React.FC = () => {
@@ -23,12 +23,52 @@ export const MainAdminDashboard: React.FC = () => {
   // New Apartment Form
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
-  const [totalHouseholds, setTotalHouseholds] = useState<number>(20);
+  const [totalHouseholds, setTotalHouseholds] = useState<number | ''>(20);
   const [adminFullName, setAdminFullName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
+  const [adminPhone, setAdminPhone] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
 
+  // 3 Verification Documents State
+  const [doc1Type, setDoc1Type] = useState('SOCIETY_REGISTRATION_DEED');
+  const [doc1FileName, setDoc1FileName] = useState('');
+  const [doc1Base64, setDoc1Base64] = useState<string | undefined>(undefined);
+
+  const [doc2Type, setDoc2Type] = useState('GOVERNMENT_ID_PROOF');
+  const [doc2FileName, setDoc2FileName] = useState('');
+  const [doc2Base64, setDoc2Base64] = useState<string | undefined>(undefined);
+
+  const [doc3Type, setDoc3Type] = useState('RWA_BOARD_RESOLUTION');
+  const [doc3FileName, setDoc3FileName] = useState('');
+  const [doc3Base64, setDoc3Base64] = useState<string | undefined>(undefined);
+
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Generic file upload to base64 handler
+  const handleFileUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    onSuccess: (fileName: string, base64: string) => void,
+    onError: (msg: string) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      onError(`File "${file.name}" exceeds 10MB limit. Please upload a smaller PDF or image.`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        onSuccess(file.name, reader.result);
+      }
+    };
+    reader.onerror = () => {
+      onError(`Failed to read "${file.name}". Please try another file.`);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const fetchData = async () => {
     try {
@@ -53,9 +93,25 @@ export const MainAdminDashboard: React.FC = () => {
 
   const handleCreateApartment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !totalHouseholds || !adminFullName || !adminEmail || !adminPassword) {
+    if (!name.trim() || !adminFullName.trim() || !adminEmail.trim() || !adminPassword) {
       setModalError('Please fill in all required fields.');
       return;
+    }
+
+    // Check duplicate documents if multiple uploaded
+    if (doc1Base64 && doc2Base64 && doc3Base64) {
+      const cleanPayload = (b64?: string) => {
+        if (!b64) return '';
+        const idx = b64.indexOf(',');
+        return idx !== -1 && idx < 100 ? b64.substring(idx + 1).trim() : b64.trim();
+      };
+      const p1 = cleanPayload(doc1Base64);
+      const p2 = cleanPayload(doc2Base64);
+      const p3 = cleanPayload(doc3Base64);
+      if (p1 === p2 || p1 === p3 || p2 === p3) {
+        setModalError('⚠️ Duplicate Document Error: All 3 verification documents must be distinct, separate files. Duplicate uploads detected.');
+        return;
+      }
     }
 
     try {
@@ -63,11 +119,21 @@ export const MainAdminDashboard: React.FC = () => {
       setModalError(null);
       await mainAdminApi.createApartment({
         name: name.trim(),
-        address: address.trim(),
-        totalHouseholds,
+        address: address.trim() || undefined,
+        totalHouseholds: typeof totalHouseholds === 'number' && totalHouseholds > 0 ? totalHouseholds : 20,
         adminFullName: adminFullName.trim(),
         adminEmail: adminEmail.trim(),
+        adminPhone: adminPhone.trim() || undefined,
         adminPassword,
+        doc1Type: doc1Base64 ? doc1Type : undefined,
+        doc1FileName: doc1Base64 ? doc1FileName : undefined,
+        doc1Base64: doc1Base64 || undefined,
+        doc2Type: doc2Base64 ? doc2Type : undefined,
+        doc2FileName: doc2Base64 ? doc2FileName : undefined,
+        doc2Base64: doc2Base64 || undefined,
+        doc3Type: doc3Base64 ? doc3Type : undefined,
+        doc3FileName: doc3Base64 ? doc3FileName : undefined,
+        doc3Base64: doc3Base64 || undefined,
       });
 
       // Reset form & close modal
@@ -76,7 +142,14 @@ export const MainAdminDashboard: React.FC = () => {
       setTotalHouseholds(20);
       setAdminFullName('');
       setAdminEmail('');
+      setAdminPhone('');
       setAdminPassword('');
+      setDoc1FileName('');
+      setDoc1Base64(undefined);
+      setDoc2FileName('');
+      setDoc2Base64(undefined);
+      setDoc3FileName('');
+      setDoc3Base64(undefined);
       setIsModalOpen(false);
       fetchData();
     } catch (err) {
@@ -256,7 +329,7 @@ export const MainAdminDashboard: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         title="Onboard Apartment Community"
         subtitle="Create an apartment community and its first Community Admin in one transaction"
-        maxWidth="lg"
+        maxWidth="2xl"
       >
         {modalError && (
           <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-rose-200 dark:border-rose-800/80 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs text-rose-700 dark:text-rose-300 animate-fade-in">
@@ -266,95 +339,304 @@ export const MainAdminDashboard: React.FC = () => {
         )}
 
         <form onSubmit={handleCreateApartment} className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className="input-label">
-                Apartment / Community Name <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Palm Meadows Residences"
-                className="input-field"
-              />
+          {/* Section 1: Community Details */}
+          <div className="rounded-2xl bg-slate-50/70 dark:bg-[#0B1120]/50 p-4 border border-slate-200/70 dark:border-slate-800 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-1.5">
+              <Building2 className="h-3.5 w-3.5" />
+              1. Community Basic Details
+            </h4>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="input-label">
+                  Apartment / Community Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Palm Meadows Residences"
+                  className="input-field"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="input-label">
+                  Address / Location
+                </label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="e.g. 77 Green Valley Road, Sector 4, Bangalore"
+                  className="input-field"
+                />
+              </div>
+
+              <div>
+                <label className="input-label">
+                  Total Households / Units <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  required
+                  value={totalHouseholds}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setTotalHouseholds('');
+                    } else {
+                      const parsed = parseInt(val, 10);
+                      setTotalHouseholds(isNaN(parsed) ? '' : parsed);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (totalHouseholds === '' || Number(totalHouseholds) < 1) {
+                      setTotalHouseholds(20);
+                    }
+                  }}
+                  className="input-field"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Community Administrator Account */}
+          <div className="rounded-2xl bg-slate-50/70 dark:bg-[#0B1120]/50 p-4 border border-slate-200/70 dark:border-slate-800 space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5" />
+              2. Community Administrator Account
+            </h4>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="input-label">
+                  Admin Full Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={adminFullName}
+                  onChange={(e) => setAdminFullName(e.target.value)}
+                  placeholder="e.g. Robert Vance"
+                  className="input-field"
+                />
+              </div>
+
+              <div>
+                <label className="input-label">
+                  Admin Email <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="admin@palmmeadows.com"
+                  className="input-field"
+                />
+              </div>
+
+              <div>
+                <label className="input-label">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={adminPhone}
+                  onChange={(e) => setAdminPhone(e.target.value)}
+                  placeholder="+91 98765 43210"
+                  className="input-field"
+                />
+              </div>
+
+              <div>
+                <label className="input-label">
+                  Initial Password <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="input-field"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Verification Documents (3-Doc AI Package) */}
+          <div className="rounded-2xl border border-brand-200 dark:border-brand-800/80 bg-brand-50/30 dark:bg-[#0B1120]/70 p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-brand-200/70 dark:border-slate-800 pb-2">
+              <div className="flex items-center gap-2">
+                <Bot className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                  3. Verification Documents (3-Doc AI Package)
+                </h4>
+              </div>
+              <span className="text-[10px] font-bold text-brand-700 dark:text-brand-300 bg-brand-100/80 dark:bg-brand-950/80 px-2 py-0.5 rounded border border-brand-200 dark:border-brand-800">
+                AI Authenticity Audit
+              </span>
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="input-label">
-                Address / Location
-              </label>
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g. 77 Green Valley Road, Sector 4, Bangalore"
-                className="input-field"
-              />
-            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+              Upload verification documents for this community. The automated AI engine checks seals, authority headers, and authenticity.
+            </p>
 
-            <div>
-              <label className="input-label">
-                Total Households / Units <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="number"
-                min={1}
-                required
-                value={totalHouseholds}
-                onChange={(e) => setTotalHouseholds(parseInt(e.target.value) || 1)}
-                className="input-field"
-              />
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              {/* Doc 1 Card */}
+              <div
+                className={`rounded-xl border p-3 text-xs space-y-2 transition-all ${
+                  doc1Base64
+                    ? 'border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30'
+                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-[#161F30]'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900 dark:text-white text-[11px] flex items-center gap-1">
+                    <FileText className="h-3.5 w-3.5 text-brand-600" />
+                    Doc 1: Society Deed
+                  </span>
+                  {doc1Base64 && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+                </div>
 
-            <div className="border-t sm:col-span-2 border-slate-100 dark:border-slate-800 pt-3">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white mb-2 uppercase tracking-wider text-brand-600 dark:text-brand-400">
-                Community Administrator Account
-              </h4>
-            </div>
+                <select
+                  value={doc1Type}
+                  onChange={(e) => setDoc1Type(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#0B1120] px-2 py-1 text-[10px] font-semibold text-slate-800 dark:text-slate-200"
+                >
+                  <option value="SOCIETY_REGISTRATION_DEED">Society Registration Deed</option>
+                  <option value="SALE_DEED">Property / Land Title Deed</option>
+                  <option value="LAND_REGISTRY_PROOF">Municipal Land Registry Proof</option>
+                </select>
 
-            <div>
-              <label className="input-label">
-                Admin Full Name <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={adminFullName}
-                onChange={(e) => setAdminFullName(e.target.value)}
-                placeholder="e.g. Robert Vance"
-                className="input-field"
-              />
-            </div>
+                <label className="flex flex-col items-center justify-center border border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer text-center transition-all">
+                  <UploadCloud className="h-4 w-4 text-slate-400 mb-1" />
+                  <span className="text-[10px] font-semibold text-brand-600 dark:text-brand-400">
+                    {doc1FileName ? (doc1FileName.length > 18 ? doc1FileName.substring(0, 18) + '...' : doc1FileName) : 'Upload Society Deed'}
+                  </span>
+                  <span className="text-[9px] text-slate-400">PDF, PNG, JPG (Max 10MB)</span>
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleFileUpload(
+                        e,
+                        (fileName, base64) => {
+                          setDoc1FileName(fileName);
+                          setDoc1Base64(base64);
+                        },
+                        (msg) => setModalError(msg)
+                      )
+                    }
+                  />
+                </label>
+              </div>
 
-            <div>
-              <label className="input-label">
-                Admin Email <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="email"
-                required
-                value={adminEmail}
-                onChange={(e) => setAdminEmail(e.target.value)}
-                placeholder="admin@palmmeadows.com"
-                className="input-field"
-              />
-            </div>
+              {/* Doc 2 Card */}
+              <div
+                className={`rounded-xl border p-3 text-xs space-y-2 transition-all ${
+                  doc2Base64
+                    ? 'border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30'
+                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-[#161F30]'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900 dark:text-white text-[11px] flex items-center gap-1">
+                    <FileText className="h-3.5 w-3.5 text-indigo-600" />
+                    Doc 2: Admin Govt ID
+                  </span>
+                  {doc2Base64 && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+                </div>
 
-            <div className="sm:col-span-2">
-              <label className="input-label">
-                Initial Password <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                placeholder="At least 6 characters"
-                className="input-field"
-              />
+                <select
+                  value={doc2Type}
+                  onChange={(e) => setDoc2Type(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#0B1120] px-2 py-1 text-[10px] font-semibold text-slate-800 dark:text-slate-200"
+                >
+                  <option value="GOVERNMENT_ID_PROOF">Aadhaar / Passport / Voter ID</option>
+                  <option value="AADHAAR_CARD">Aadhaar Card</option>
+                  <option value="PASSPORT">Passport</option>
+                  <option value="PAN_CARD">PAN Card (Entity / Signatory)</option>
+                </select>
+
+                <label className="flex flex-col items-center justify-center border border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer text-center transition-all">
+                  <UploadCloud className="h-4 w-4 text-slate-400 mb-1" />
+                  <span className="text-[10px] font-semibold text-brand-600 dark:text-brand-400">
+                    {doc2FileName ? (doc2FileName.length > 18 ? doc2FileName.substring(0, 18) + '...' : doc2FileName) : 'Upload Govt ID'}
+                  </span>
+                  <span className="text-[9px] text-slate-400">PDF, PNG, JPG (Max 10MB)</span>
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleFileUpload(
+                        e,
+                        (fileName, base64) => {
+                          setDoc2FileName(fileName);
+                          setDoc2Base64(base64);
+                        },
+                        (msg) => setModalError(msg)
+                      )
+                    }
+                  />
+                </label>
+              </div>
+
+              {/* Doc 3 Card */}
+              <div
+                className={`rounded-xl border p-3 text-xs space-y-2 transition-all ${
+                  doc3Base64
+                    ? 'border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30'
+                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-[#161F30]'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900 dark:text-white text-[11px] flex items-center gap-1">
+                    <FileText className="h-3.5 w-3.5 text-emerald-600" />
+                    Doc 3: Signatory Proof
+                  </span>
+                  {doc3Base64 && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+                </div>
+
+                <select
+                  value={doc3Type}
+                  onChange={(e) => setDoc3Type(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#0B1120] px-2 py-1 text-[10px] font-semibold text-slate-800 dark:text-slate-200"
+                >
+                  <option value="RWA_BOARD_RESOLUTION">RWA Board Resolution</option>
+                  <option value="AUTH_SIGNATORY_PROOF">Authorized Signatory Letter</option>
+                  <option value="MUNICIPAL_WATER_SANCTION">Municipal Water Connection Sanction</option>
+                  <option value="ELECTRICITY_SANCTION">Substation / Common Bill</option>
+                </select>
+
+                <label className="flex flex-col items-center justify-center border border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 cursor-pointer text-center transition-all">
+                  <UploadCloud className="h-4 w-4 text-slate-400 mb-1" />
+                  <span className="text-[10px] font-semibold text-brand-600 dark:text-brand-400">
+                    {doc3FileName ? (doc3FileName.length > 18 ? doc3FileName.substring(0, 18) + '...' : doc3FileName) : 'Upload Proof'}
+                  </span>
+                  <span className="text-[9px] text-slate-400">PDF, PNG, JPG (Max 10MB)</span>
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleFileUpload(
+                        e,
+                        (fileName, base64) => {
+                          setDoc3FileName(fileName);
+                          setDoc3Base64(base64);
+                        },
+                        (msg) => setModalError(msg)
+                      )
+                    }
+                  />
+                </label>
+              </div>
             </div>
           </div>
 
