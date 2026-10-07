@@ -311,6 +311,59 @@ export const LoginPage: React.FC = () => {
           </svg>
           <span>Sign in with Google</span>
         </button>
+
+        {/* Demo Credentials Quick Fill */}
+        <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/80">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2.5 text-center">
+            Demo Accounts (One-Click Fill)
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('admin@aquatrack.com');
+                setPassword('Admin@12345');
+                setError(null);
+              }}
+              className="flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-brand-50 hover:border-brand-300 dark:hover:bg-brand-950/40 dark:hover:border-brand-800 transition-all cursor-pointer group text-center"
+            >
+              <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-brand-600 dark:group-hover:text-brand-400">
+                Main Admin
+              </span>
+              <span className="text-[9px] text-slate-600 dark:text-slate-400">AquaTrack</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('admin@palmmeadows.com');
+                setPassword('Admin@12345');
+                setError(null);
+              }}
+              className="flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-brand-50 hover:border-brand-300 dark:hover:bg-brand-950/40 dark:hover:border-brand-800 transition-all cursor-pointer group text-center"
+            >
+              <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-brand-600 dark:group-hover:text-brand-400">
+                Society Admin
+              </span>
+              <span className="text-[9px] text-slate-600 dark:text-slate-400">Palm Meadows</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('john@palmmeadows.com');
+                setPassword('Resident@123');
+                setError(null);
+              }}
+              className="flex flex-col items-center justify-center p-2 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-brand-50 hover:border-brand-300 dark:hover:bg-brand-950/40 dark:hover:border-brand-800 transition-all cursor-pointer group text-center"
+            >
+              <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-brand-600 dark:group-hover:text-brand-400">
+                Resident
+              </span>
+              <span className="text-[9px] text-slate-600 dark:text-slate-400">Flat A-101</span>
+            </button>
+          </div>
+        </div>
       </form>
 
       {/* Google OAuth Modal & Setup Helper */}
