@@ -118,8 +118,8 @@ export const CommunityAdminsPage: React.FC = () => {
   const [editHouseholdResidentEmail, setEditHouseholdResidentEmail] = useState('');
   const [editHouseholdResidentPhone, setEditHouseholdResidentPhone] = useState('');
   const [editHouseholdMeter, setEditHouseholdMeter] = useState('');
-  const [editHouseholdArea, setEditHouseholdArea] = useState<number>(1200);
-  const [editHouseholdOccupancy, setEditHouseholdOccupancy] = useState<number>(2);
+  const [editHouseholdArea, setEditHouseholdArea] = useState<number | ''>(1200);
+  const [editHouseholdOccupancy, setEditHouseholdOccupancy] = useState<number | ''>(2);
   const [editHouseholdHasMeter, setEditHouseholdHasMeter] = useState<boolean>(true);
   const [editHouseholdStatus, setEditHouseholdStatus] = useState<AccountStatus>('ACTIVE');
   const [savingHousehold, setSavingHousehold] = useState(false);
@@ -734,8 +734,8 @@ export const CommunityAdminsPage: React.FC = () => {
       await mainAdminApi.updateHousehold(selectedHousehold.id, {
         flatNumber: editHouseholdFlat.trim(),
         meterSerialNumber: editHouseholdMeter.trim() || undefined,
-        areaSqft: Number(editHouseholdArea),
-        occupancyCount: Number(editHouseholdOccupancy),
+        areaSqft: typeof editHouseholdArea === 'number' && editHouseholdArea > 0 ? editHouseholdArea : 1200,
+        occupancyCount: typeof editHouseholdOccupancy === 'number' && editHouseholdOccupancy > 0 ? editHouseholdOccupancy : 2,
         hasMeter: editHouseholdHasMeter,
         status: editHouseholdStatus,
         residentFullName: editHouseholdResidentName.trim() || undefined,
@@ -751,8 +751,8 @@ export const CommunityAdminsPage: React.FC = () => {
                 ...item,
                 flatNumber: editHouseholdFlat.trim(),
                 meterSerialNumber: editHouseholdMeter.trim() || undefined,
-                areaSqft: Number(editHouseholdArea),
-                occupancyCount: Number(editHouseholdOccupancy),
+                areaSqft: typeof editHouseholdArea === 'number' && editHouseholdArea > 0 ? editHouseholdArea : 1200,
+                occupancyCount: typeof editHouseholdOccupancy === 'number' && editHouseholdOccupancy > 0 ? editHouseholdOccupancy : 2,
                 hasMeter: editHouseholdHasMeter,
                 status: editHouseholdStatus,
                 residentName: editHouseholdResidentName.trim() || 'Vacant / Unregistered',
@@ -3608,7 +3608,20 @@ export const CommunityAdminsPage: React.FC = () => {
                     min="100"
                     max="20000"
                     value={editHouseholdArea}
-                    onChange={(e) => setEditHouseholdArea(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '') {
+                        setEditHouseholdArea('');
+                      } else {
+                        const parsed = parseFloat(val);
+                        setEditHouseholdArea(isNaN(parsed) ? '' : parsed);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (editHouseholdArea === '' || Number(editHouseholdArea) < 100) {
+                        setEditHouseholdArea(1200);
+                      }
+                    }}
                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-brand-500"
                   />
                 </div>
@@ -3621,7 +3634,20 @@ export const CommunityAdminsPage: React.FC = () => {
                     min="1"
                     max="50"
                     value={editHouseholdOccupancy}
-                    onChange={(e) => setEditHouseholdOccupancy(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '') {
+                        setEditHouseholdOccupancy('');
+                      } else {
+                        const parsed = parseInt(val, 10);
+                        setEditHouseholdOccupancy(isNaN(parsed) ? '' : parsed);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (editHouseholdOccupancy === '' || Number(editHouseholdOccupancy) < 1) {
+                        setEditHouseholdOccupancy(2);
+                      }
+                    }}
                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-brand-500"
                   />
                 </div>

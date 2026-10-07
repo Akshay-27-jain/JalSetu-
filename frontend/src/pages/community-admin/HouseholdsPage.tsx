@@ -54,8 +54,8 @@ export const HouseholdsPage: React.FC = () => {
   // Form State (New Household)
   const [flatNumber, setFlatNumber] = useState('');
   const [meterSerialNumber, setMeterSerialNumber] = useState('');
-  const [areaSqft, setAreaSqft] = useState<number>(1200);
-  const [occupancyCount, setOccupancyCount] = useState<number>(3);
+  const [areaSqft, setAreaSqft] = useState<number | ''>(1200);
+  const [occupancyCount, setOccupancyCount] = useState<number | ''>(3);
   const [hasMeter, setHasMeter] = useState<boolean>(true);
   const [residentFullName, setResidentFullName] = useState('');
   const [residentEmail, setResidentEmail] = useState('');
@@ -80,8 +80,8 @@ export const HouseholdsPage: React.FC = () => {
   const [editingHousehold, setEditingHousehold] = useState<Household | null>(null);
   const [editFlatNumber, setEditFlatNumber] = useState('');
   const [editMeterSerial, setEditMeterSerial] = useState('');
-  const [editAreaSqft, setEditAreaSqft] = useState<number>(1200);
-  const [editOccupancy, setEditOccupancy] = useState<number>(3);
+  const [editAreaSqft, setEditAreaSqft] = useState<number | ''>(1200);
+  const [editOccupancy, setEditOccupancy] = useState<number | ''>(3);
   const [editHasMeter, setEditHasMeter] = useState<boolean>(true);
   const [editResidentName, setEditResidentName] = useState('');
   const [editResidentEmail, setEditResidentEmail] = useState('');
@@ -246,8 +246,8 @@ export const HouseholdsPage: React.FC = () => {
       const res = await communityAdminApi.createHousehold({
         flatNumber: flatNumber.trim().toUpperCase(),
         meterSerialNumber: meterSerialNumber.trim() || undefined,
-        areaSqft,
-        occupancyCount,
+        areaSqft: typeof areaSqft === 'number' && areaSqft > 0 ? areaSqft : 1200,
+        occupancyCount: typeof occupancyCount === 'number' && occupancyCount > 0 ? occupancyCount : 3,
         hasMeter,
         residentFullName: residentFullName.trim() || undefined,
         residentEmail: residentEmail.trim().toLowerCase() || undefined,
@@ -283,6 +283,8 @@ export const HouseholdsPage: React.FC = () => {
       // Reset form
       setFlatNumber('');
       setMeterSerialNumber('');
+      setAreaSqft(1200);
+      setOccupancyCount(3);
       setResidentFullName('');
       setResidentEmail('');
       setResidentPhone('');
@@ -351,8 +353,8 @@ export const HouseholdsPage: React.FC = () => {
       await communityAdminApi.updateHousehold(editingHousehold.id, {
         flatNumber: editFlatNumber.trim().toUpperCase(),
         meterSerialNumber: editMeterSerial.trim() || undefined,
-        areaSqft: editAreaSqft,
-        occupancyCount: editOccupancy,
+        areaSqft: typeof editAreaSqft === 'number' && editAreaSqft > 0 ? editAreaSqft : 1200,
+        occupancyCount: typeof editOccupancy === 'number' && editOccupancy > 0 ? editOccupancy : 3,
         hasMeter: editHasMeter,
         residentFullName: editResidentName.trim() || undefined,
         residentEmail: editResidentEmail.trim().toLowerCase() || undefined,
@@ -962,7 +964,20 @@ export const HouseholdsPage: React.FC = () => {
                     type="number"
                     min="100"
                     value={areaSqft}
-                    onChange={(e) => setAreaSqft(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '') {
+                        setAreaSqft('');
+                      } else {
+                        const parsed = parseFloat(val);
+                        setAreaSqft(isNaN(parsed) ? '' : parsed);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (areaSqft === '' || Number(areaSqft) < 100) {
+                        setAreaSqft(1200);
+                      }
+                    }}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0B1120] px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:border-brand-500 focus:outline-none"
                   />
                 </div>
@@ -976,7 +991,20 @@ export const HouseholdsPage: React.FC = () => {
                     min="1"
                     max="20"
                     value={occupancyCount}
-                    onChange={(e) => setOccupancyCount(Number(e.target.value))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '') {
+                        setOccupancyCount('');
+                      } else {
+                        const parsed = parseInt(val, 10);
+                        setOccupancyCount(isNaN(parsed) ? '' : parsed);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (occupancyCount === '' || Number(occupancyCount) < 1) {
+                        setOccupancyCount(1);
+                      }
+                    }}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0B1120] px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:border-brand-500 focus:outline-none"
                   />
                 </div>
@@ -1343,7 +1371,20 @@ export const HouseholdsPage: React.FC = () => {
                       type="number"
                       min="100"
                       value={editAreaSqft}
-                      onChange={(e) => setEditAreaSqft(Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '') {
+                          setEditAreaSqft('');
+                        } else {
+                          const parsed = parseFloat(val);
+                          setEditAreaSqft(isNaN(parsed) ? '' : parsed);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (editAreaSqft === '' || Number(editAreaSqft) < 100) {
+                          setEditAreaSqft(1200);
+                        }
+                      }}
                       className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0B1120] px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:border-brand-500 focus:outline-none"
                     />
                   </div>
@@ -1357,7 +1398,20 @@ export const HouseholdsPage: React.FC = () => {
                       min="1"
                       max="20"
                       value={editOccupancy}
-                      onChange={(e) => setEditOccupancy(Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '') {
+                          setEditOccupancy('');
+                        } else {
+                          const parsed = parseInt(val, 10);
+                          setEditOccupancy(isNaN(parsed) ? '' : parsed);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (editOccupancy === '' || Number(editOccupancy) < 1) {
+                          setEditOccupancy(1);
+                        }
+                      }}
                       className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0B1120] px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:border-brand-500 focus:outline-none"
                     />
                   </div>
