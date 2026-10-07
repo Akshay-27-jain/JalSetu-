@@ -113,7 +113,7 @@ export const UsageHistoryPage: React.FC = () => {
   };
 
   // Aggregations
-  const totalConsumption = readings.reduce((acc, r) => acc + r.consumptionKl, 0);
+  const totalConsumption = readings.reduce((acc, r) => acc + (r.consumptionKl || 0), 0);
   const avgDaily = readings.length > 0 ? (totalConsumption / readings.length).toFixed(2) : '0.00';
   const overuseCount = readings.filter((r) => r.status === 'Overuse').length;
 
@@ -167,7 +167,7 @@ export const UsageHistoryPage: React.FC = () => {
             <Droplets className="h-3.5 w-3.5 text-brand-500" /> Total Recorded Volume
           </span>
           <p className="text-xl font-bold font-display text-slate-900 dark:text-white tabular-nums">
-            {totalConsumption.toFixed(2)} kL
+            {Number(totalConsumption ?? 0).toFixed(2)} kL
           </p>
           <p className="text-[11px] text-slate-500 dark:text-slate-400">Across all recorded cycles</p>
         </div>

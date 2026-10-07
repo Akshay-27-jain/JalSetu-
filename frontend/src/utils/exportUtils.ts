@@ -123,23 +123,23 @@ export function printInvoiceStatement(invoice: Invoice) {
           <td>${s.slabName}</td>
           <td>${s.volumeBilledKl} kL</td>
           <td>₹${s.ratePerKl}/kL</td>
-          <td class="text-right">₹${s.amount.toFixed(2)}</td>
+          <td class="text-right">₹${Number(s.amount ?? 0).toFixed(2)}</td>
         </tr>`
               )
               .join('')
-          : `<tr><td>Metered Water Usage</td><td>${invoice.consumptionKl} kL</td><td>Tiered</td><td class="text-right">₹${invoice.meteredCharge.toFixed(2)}</td></tr>`
+          : `<tr><td>Metered Water Usage</td><td>${invoice.consumptionKl} kL</td><td>Tiered</td><td class="text-right">₹${Number(invoice.meteredCharge ?? 0).toFixed(2)}</td></tr>`
       }
       <tr>
         <td>Base Connection & Maintenance Fee</td>
         <td>Fixed</td>
         <td>-</td>
-        <td class="text-right">₹${invoice.baseCharge.toFixed(2)}</td>
+        <td class="text-right">₹${Number(invoice.baseCharge ?? 0).toFixed(2)}</td>
       </tr>
       <tr>
         <td>Shared Water & Tanker Apportionment</td>
         <td>Apportioned</td>
         <td>-</td>
-        <td class="text-right">₹${invoice.sharedCharge.toFixed(2)}</td>
+        <td class="text-right">₹${Number(invoice.sharedCharge ?? 0).toFixed(2)}</td>
       </tr>
       <tr class="total-row">
         <td colspan="3">TOTAL AMOUNT</td>

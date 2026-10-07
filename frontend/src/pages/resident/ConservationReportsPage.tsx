@@ -436,11 +436,11 @@ export const ConservationReportsPage: React.FC = () => {
               </div>
               <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60 flex justify-between items-center text-xs">
                 <span className="text-slate-600 dark:text-slate-400">Your Volume:</span>
-                <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">{slabBreakdown.slab1Volume.toFixed(2)} kL</span>
+                <span className="font-mono font-bold text-emerald-700 dark:text-emerald-300">{Number(slabBreakdown.slab1Volume ?? 0).toFixed(2)} kL</span>
               </div>
               <div className="flex justify-between items-center text-xs font-bold text-slate-900 dark:text-white">
                 <span>Calculated Cost:</span>
-                <span className="font-mono text-emerald-600 dark:text-emerald-400">₹{slabBreakdown.slab1Cost.toFixed(2)}</span>
+                <span className="font-mono text-emerald-600 dark:text-emerald-400">₹{Number(slabBreakdown.slab1Cost ?? 0).toFixed(2)}</span>
               </div>
             </div>
 
@@ -458,11 +458,11 @@ export const ConservationReportsPage: React.FC = () => {
               </div>
               <div className="pt-2 border-t border-sky-200/60 dark:border-sky-800/60 flex justify-between items-center text-xs">
                 <span className="text-slate-600 dark:text-slate-400">Your Volume:</span>
-                <span className="font-mono font-bold text-sky-700 dark:text-sky-300">{slabBreakdown.slab2Volume.toFixed(2)} kL</span>
+                <span className="font-mono font-bold text-sky-700 dark:text-sky-300">{Number(slabBreakdown.slab2Volume ?? 0).toFixed(2)} kL</span>
               </div>
               <div className="flex justify-between items-center text-xs font-bold text-slate-900 dark:text-white">
                 <span>Calculated Cost:</span>
-                <span className="font-mono text-sky-600 dark:text-sky-400">₹{slabBreakdown.slab2Cost.toFixed(2)}</span>
+                <span className="font-mono text-sky-600 dark:text-sky-400">₹{Number(slabBreakdown.slab2Cost ?? 0).toFixed(2)}</span>
               </div>
             </div>
 
@@ -480,11 +480,11 @@ export const ConservationReportsPage: React.FC = () => {
               </div>
               <div className="pt-2 border-t border-rose-200/60 dark:border-rose-800/60 flex justify-between items-center text-xs">
                 <span className="text-slate-600 dark:text-slate-400">Your Volume:</span>
-                <span className="font-mono font-bold text-rose-700 dark:text-rose-300">{slabBreakdown.slab3Volume.toFixed(2)} kL</span>
+                <span className="font-mono font-bold text-rose-700 dark:text-rose-300">{Number(slabBreakdown.slab3Volume ?? 0).toFixed(2)} kL</span>
               </div>
               <div className="flex justify-between items-center text-xs font-bold text-slate-900 dark:text-white">
                 <span>Calculated Cost:</span>
-                <span className="font-mono text-rose-600 dark:text-rose-400">₹{slabBreakdown.slab3Cost.toFixed(2)}</span>
+                <span className="font-mono text-rose-600 dark:text-rose-400">₹{Number(slabBreakdown.slab3Cost ?? 0).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -497,23 +497,23 @@ export const ConservationReportsPage: React.FC = () => {
             <div className="space-y-3">
               <div className="flex justify-between items-center text-xs py-2 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-600 dark:text-slate-400">Fixed Monthly Connection & Maintenance Fee:</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">₹{slabBreakdown.baseFee.toFixed(2)}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">₹{Number(slabBreakdown.baseFee ?? 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center text-xs py-2 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-600 dark:text-slate-400">Tier 1 Subsidized Consumption (0–10 kL):</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">₹{slabBreakdown.slab1Cost.toFixed(2)}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">₹{Number(slabBreakdown.slab1Cost ?? 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center text-xs py-2 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-600 dark:text-slate-400">Tier 2 Standard Consumption (10–25 kL):</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">₹{slabBreakdown.slab2Cost.toFixed(2)}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">₹{Number(slabBreakdown.slab2Cost ?? 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center text-xs py-2 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-600 dark:text-slate-400">Tier 3 Surcharge Consumption (&gt;25 kL):</span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">₹{slabBreakdown.slab3Cost.toFixed(2)}</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">₹{Number(slabBreakdown.slab3Cost ?? 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center text-sm font-bold pt-2 text-brand-600 dark:text-brand-400">
                 <span>Total Estimated Monthly Metered Bill:</span>
-                <span className="font-mono text-base">₹{slabBreakdown.totalWaterCost.toFixed(2)}</span>
+                <span className="font-mono text-base">₹{Number(slabBreakdown.totalWaterCost ?? 0).toFixed(2)}</span>
               </div>
             </div>
           </div>

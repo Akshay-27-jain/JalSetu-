@@ -18,7 +18,7 @@ function AnimatedCounter({
   formatCommas = false,
   start = true,
 }: AnimatedCounterProps) {
-  const [displayValue, setDisplayValue] = useState(0);
+  const [displayValue, setDisplayValue] = useState<number>(0);
 
   useEffect(() => {
     if (!start) return;
@@ -27,7 +27,7 @@ function AnimatedCounter({
     let frameId: number;
 
     const startValue = 0;
-    const endValue = value;
+    const endValue = typeof value === 'number' && !isNaN(value) ? value : 0;
 
     const step = (timestamp: number) => {
       if (!startTimestamp) startTimestamp = timestamp;
@@ -51,11 +51,13 @@ function AnimatedCounter({
     return () => cancelAnimationFrame(frameId);
   }, [value, duration, start]);
 
+  const safeNum = typeof displayValue === 'number' && !isNaN(displayValue) ? displayValue : 0;
+
   if (decimals > 0) {
-    return <>{displayValue.toFixed(decimals)}</>;
+    return <>{safeNum.toFixed(decimals)}</>;
   }
 
-  const rounded = Math.round(displayValue);
+  const rounded = Math.round(safeNum);
   return <>{formatCommas ? rounded.toLocaleString() : rounded}</>;
 }
 

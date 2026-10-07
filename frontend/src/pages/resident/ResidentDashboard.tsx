@@ -591,7 +591,7 @@ export const ResidentDashboard: React.FC = () => {
                   <div className="flex items-center justify-between text-xs font-semibold">
                     <span className="text-slate-600 dark:text-slate-400">{t('tier1SubsidizedAllowance', 'Tier 1 Subsidized Allowance:')}</span>
                     <span className="text-slate-900 dark:text-white font-bold">
-                      {currentConsumption.toFixed(1)} / {baseTierLimit} kL
+                      {Number(currentConsumption ?? 0).toFixed(1)} / {baseTierLimit} kL
                     </span>
                   </div>
 
@@ -610,8 +610,8 @@ export const ResidentDashboard: React.FC = () => {
 
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
                     {currentConsumption <= baseTierLimit
-                      ? `✨ ${(baseTierLimit - currentConsumption).toFixed(1)} kL remaining (Tier 1)`
-                      : `⚠️ ${(currentConsumption - baseTierLimit).toFixed(1)} kL consumed (Tier 2)`}
+                      ? `✨ ${(Number(baseTierLimit ?? 10) - Number(currentConsumption ?? 0)).toFixed(1)} kL remaining (Tier 1)`
+                      : `⚠️ ${(Number(currentConsumption ?? 0) - Number(baseTierLimit ?? 10)).toFixed(1)} kL consumed (Tier 2)`}
                   </p>
                 </div>
 
@@ -619,15 +619,15 @@ export const ResidentDashboard: React.FC = () => {
                 <div className="mt-5 rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white/70 dark:bg-slate-800/60 p-3.5 space-y-2 text-xs">
                   <div className="flex justify-between text-slate-600 dark:text-slate-400">
                     <span>{t('baseMaintenanceFee', 'Base Maintenance Fee:')}</span>
-                    <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">₹{baseMaintenanceFee.toFixed(2)}</span>
+                    <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">₹{Number(baseMaintenanceFee ?? 150).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-slate-600 dark:text-slate-400">
                     <span>{t('estimatedMeteredWater', 'Estimated Metered Water:')}</span>
-                    <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">₹{estimatedMeteredCharge.toFixed(2)}</span>
+                    <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">₹{Number(estimatedMeteredCharge ?? 0).toFixed(2)}</span>
                   </div>
                   <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between font-bold text-slate-900 dark:text-white text-sm">
                     <span>{t('estimatedMonthBill', 'Estimated Month Bill:')}</span>
-                    <span className="text-brand-600 dark:text-brand-400 font-mono">₹{estimatedTotalBill.toFixed(2)}</span>
+                    <span className="text-brand-600 dark:text-brand-400 font-mono">₹{Number(estimatedTotalBill ?? 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -637,8 +637,8 @@ export const ResidentDashboard: React.FC = () => {
                 {unpaidInvoice ? (
                   <div className="rounded-2xl border border-amber-200 dark:border-amber-900 bg-amber-50/80 dark:bg-amber-950/40 p-3 flex items-center justify-between text-xs">
                     <div>
-                      <p className="font-bold text-amber-900 dark:text-amber-200">{t('unpaidBill', 'Unpaid Bill:')} ₹{unpaidInvoice.totalAmount.toFixed(2)}</p>
-                      <p className="text-[10px] text-amber-700 dark:text-amber-300">{t('dueOn', 'Due on')} {unpaidInvoice.dueDate}</p>
+                      <p className="font-bold text-amber-900 dark:text-amber-200">{t('unpaidBill', 'Unpaid Bill:')} ₹{Number(unpaidInvoice.totalAmount ?? 0).toFixed(2)}</p>
+                      <p className="text-[10px] text-amber-700 dark:text-amber-300">{t('dueOn', 'Due on')} {unpaidInvoice.dueDate || 'N/A'}</p>
                     </div>
                     <Link
                       to="/resident/invoices"
@@ -781,7 +781,7 @@ export const ResidentDashboard: React.FC = () => {
                     You have adopted {completedTips.length} of {aiTips.length} personalized habits
                   </h3>
                   <p className="text-xs text-slate-600 dark:text-slate-300">
-                    Estimated monthly household impact: <strong className="text-emerald-700 dark:text-emerald-300">{totalSavedKl.toFixed(1)} kL saved (~₹{totalSavedInr}/month)</strong>
+                    Estimated monthly household impact: <strong className="text-emerald-700 dark:text-emerald-300">{Number(totalSavedKl ?? 0).toFixed(1)} kL saved (~₹{totalSavedInr}/month)</strong>
                   </p>
                 </div>
               </div>

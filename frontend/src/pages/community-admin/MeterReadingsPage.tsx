@@ -511,7 +511,7 @@ export const MeterReadingsPage: React.FC = () => {
                       Previous Recorded Dial: {priorReading !== undefined ? `${priorReading} kL` : 'None'}
                     </span>
                     <span>
-                      New Dial: {currentReadingNum.toFixed(2)} kL
+                      New Dial: {Number(currentReadingNum ?? 0).toFixed(2)} kL
                     </span>
                   </div>
                 </div>

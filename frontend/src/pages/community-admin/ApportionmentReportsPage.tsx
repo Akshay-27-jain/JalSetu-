@@ -173,7 +173,7 @@ export const ApportionmentReportsPage: React.FC = () => {
     filteredReadings.forEach((r) => {
       const entry = flatMap.get(r.householdId);
       if (entry) {
-        entry.totalConsumptionKl += r.consumptionKl;
+        entry.totalConsumptionKl += (r.consumptionKl || 0);
         entry.readingCount += 1;
         if (entry.lastReadingDate === 'No readings' || r.readingDate > entry.lastReadingDate) {
           entry.lastReadingDate = r.readingDate;
@@ -287,7 +287,7 @@ export const ApportionmentReportsPage: React.FC = () => {
     const overuseThreshold = activeAvg * 1.35;
 
     return sorted.map((item) => {
-      const vol = Number(item.totalConsumptionKl.toFixed(2));
+      const vol = Number((item.totalConsumptionKl ?? 0).toFixed(2));
       const isOveruse = item.hasOveruse || (vol > overuseThreshold && vol > 0);
       return {
         flat: `Flat ${item.household.flatNumber}`,
@@ -337,8 +337,8 @@ export const ApportionmentReportsPage: React.FC = () => {
         return {
           wing: w.name,
           sampleFlats,
-          totalKl: Number(w.totalKl.toFixed(2)),
-          percentage: Number(pct.toFixed(1)),
+          totalKl: Number((w.totalKl ?? 0).toFixed(2)),
+          percentage: Number((pct ?? 0).toFixed(1)),
           color: colors[idx % colors.length],
         };
       });
@@ -354,20 +354,20 @@ export const ApportionmentReportsPage: React.FC = () => {
   // Top 8 Highest Consumers for Bar Chart
   const topConsumersChartData = useMemo(() => {
     return [...apportionmentData]
-      .sort((a, b) => b.totalConsumptionKl - a.totalConsumptionKl)
+      .sort((a, b) => (b.totalConsumptionKl ?? 0) - (a.totalConsumptionKl ?? 0))
       .slice(0, 8)
       .map((item) => ({
         flat: item.household.flatNumber,
-        consumption: Number(item.totalConsumptionKl.toFixed(2)),
+        consumption: Number((item.totalConsumptionKl ?? 0).toFixed(2)),
         isOveruse: item.hasOveruse,
       }));
   }, [apportionmentData]);
 
   // Water Balance Pie Chart Data
   const waterAuditPieData = useMemo(() => [
-    { name: 'Household Metered Usage', value: Number(totalMeteredConsumptionKl.toFixed(1)), color: '#0284c7' },
-    { name: 'Common Facilities (Garden/Pool/Club)', value: Number(commonFacilityWaterKl.toFixed(1)), color: '#10b981' },
-    { name: 'Distribution Variance (Buffer/Loss)', value: Number(distributionLossKl.toFixed(1)), color: '#f59e0b' },
+    { name: 'Household Metered Usage', value: Number((totalMeteredConsumptionKl ?? 0).toFixed(1)), color: '#0284c7' },
+    { name: 'Common Facilities (Garden/Pool/Club)', value: Number((commonFacilityWaterKl ?? 0).toFixed(1)), color: '#10b981' },
+    { name: 'Distribution Variance (Buffer/Loss)', value: Number((distributionLossKl ?? 0).toFixed(1)), color: '#f59e0b' },
   ], [totalMeteredConsumptionKl, commonFacilityWaterKl, distributionLossKl]);
 
   // Format cycle name from startDate/endDate
@@ -415,12 +415,12 @@ export const ApportionmentReportsPage: React.FC = () => {
         `"${(item.household.residentName || 'Resident').replace(/"/g, '""')}"`,
         item.household.areaSqft || 1200,
         item.household.occupancyCount || 3,
-        vol.toFixed(2),
-        t1.toFixed(2),
-        t2.toFixed(2),
-        t3.toFixed(2),
-        commonShare.toFixed(2),
-        totalBill.toFixed(2),
+        Number(vol ?? 0).toFixed(2),
+        Number(t1 ?? 0).toFixed(2),
+        Number(t2 ?? 0).toFixed(2),
+        Number(t3 ?? 0).toFixed(2),
+        Number(commonShare ?? 0).toFixed(2),
+        Number(totalBill ?? 0).toFixed(2),
         item.hasOveruse ? 'OVERUSE_ALERT' : 'NORMAL',
       ];
     });
@@ -497,8 +497,8 @@ export const ApportionmentReportsPage: React.FC = () => {
         />
         <StatCard
           title="Bulk Procurement"
-          value={`${totalBulkProcuredKl.toFixed(1)} kL`}
-          subtitle={`Municipal (${municipalSupplyKl.toFixed(0)} kL) + Tankers (${bulkTankersKl.toFixed(0)} kL)`}
+          value={`${Number(totalBulkProcuredKl ?? 0).toFixed(1)} kL`}
+          subtitle={`Municipal (${Number(municipalSupplyKl ?? 0).toFixed(0)} kL) + Tankers (${Number(bulkTankersKl ?? 0).toFixed(0)} kL)`}
           icon={Truck}
           iconBgColor="bg-indigo-50 dark:bg-indigo-950/60"
           iconColor="text-indigo-600 dark:text-indigo-400"
@@ -506,14 +506,14 @@ export const ApportionmentReportsPage: React.FC = () => {
         <StatCard
           title="Common & Loss Ratio"
           value={`${unaccountedLossPercent}%`}
-          subtitle={`${(commonFacilityWaterKl + distributionLossKl).toFixed(1)} kL shared facilities/buffer`}
+          subtitle={`${((commonFacilityWaterKl || 0) + (distributionLossKl || 0)).toFixed(1)} kL shared facilities/buffer`}
           icon={Percent}
           iconBgColor="bg-amber-50 dark:bg-amber-950/60"
           iconColor="text-amber-600 dark:text-amber-400"
         />
         <StatCard
           title="Avg Flat Consumption"
-          value={`${(totalMeteredConsumptionKl / (households.length || 1)).toFixed(1)} kL`}
+          value={`${((totalMeteredConsumptionKl || 0) / (households.length || 1)).toFixed(1)} kL`}
           subtitle="Cycle benchmark per unit"
           icon={Gauge}
           iconBgColor="bg-emerald-50 dark:bg-emerald-950/60"
@@ -694,12 +694,12 @@ export const ApportionmentReportsPage: React.FC = () => {
                 </p>
                 <div className="flex items-baseline gap-1">
                   <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                    {totalWaterApportionedKl.toFixed(1)}
+                    {Number(totalWaterApportionedKl ?? 0).toFixed(1)}
                   </span>
                   <span className="text-sm font-bold text-slate-500">kL</span>
                 </div>
                 <p className="text-xs text-sky-600 dark:text-sky-400 font-semibold mt-1">
-                  {Math.round(totalWaterApportionedKl * 1000).toLocaleString()} Liters recorded
+                  {Math.round((totalWaterApportionedKl ?? 0) * 1000).toLocaleString()} Liters recorded
                 </p>
               </div>
               <div className="h-10 w-10 rounded-full bg-sky-50 dark:bg-sky-950/80 border border-sky-100 dark:border-sky-800/80 flex items-center justify-center text-sky-500 shrink-0">
@@ -715,7 +715,7 @@ export const ApportionmentReportsPage: React.FC = () => {
                 </p>
                 <div className="flex items-baseline gap-1">
                   <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                    {avgUsagePerFlat.toFixed(2)}
+                    {Number(avgUsagePerFlat ?? 0).toFixed(2)}
                   </span>
                   <span className="text-sm font-bold text-slate-500">kL / flat</span>
                 </div>
@@ -887,13 +887,13 @@ export const ApportionmentReportsPage: React.FC = () => {
                         Wing {wing.wing}
                       </span>
                       <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        {wing.percentage.toFixed(1)}%
+                        {Number(wing.percentage ?? 0).toFixed(1)}%
                       </span>
                     </div>
 
                     <div className="mt-2">
                       <div className="text-lg font-extrabold text-slate-900 dark:text-white font-mono">
-                        {wing.totalKl.toFixed(2)} <span className="text-xs font-normal text-slate-400">kL</span>
+                        {Number(wing.totalKl ?? 0).toFixed(2)} <span className="text-xs font-normal text-slate-400">kL</span>
                       </div>
                       <p className="text-[11px] text-slate-400 mt-0.5">
                         {Math.round(wing.totalKl * 1000).toLocaleString()} Liters
@@ -960,7 +960,7 @@ export const ApportionmentReportsPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {paginatedRows.map((item) => {
-                    const vol = item.totalConsumptionKl;
+                    const vol = item.totalConsumptionKl || 0;
                     const t1 = Math.min(vol, 10) * 22;
                     const t2 = Math.min(Math.max(0, vol - 10), 15) * 35;
                     const t3 = Math.max(0, vol - 25) * 55;
@@ -982,12 +982,12 @@ export const ApportionmentReportsPage: React.FC = () => {
                           {item.household.meterSerialNumber || 'UNMETERED'}
                         </td>
                         <td className="px-5 py-3.5 font-mono font-bold text-brand-600 dark:text-brand-400">
-                          {vol.toFixed(2)} kL
+                          {Number(vol ?? 0).toFixed(2)} kL
                         </td>
-                        <td className="px-5 py-3.5 font-mono">₹{meteredCharge.toFixed(2)}</td>
-                        <td className="px-5 py-3.5 font-mono text-slate-500">₹{commonShare.toFixed(2)}</td>
+                        <td className="px-5 py-3.5 font-mono">₹{Number(meteredCharge ?? 0).toFixed(2)}</td>
+                        <td className="px-5 py-3.5 font-mono text-slate-500">₹{Number(commonShare ?? 0).toFixed(2)}</td>
                         <td className="px-5 py-3.5 font-mono font-bold text-slate-900 dark:text-white">
-                          ₹{totalBill.toFixed(2)}
+                          ₹{Number(totalBill ?? 0).toFixed(2)}
                         </td>
                         <td className="px-5 py-3.5 font-mono">{pctOfSociety}%</td>
                         <td className="px-5 py-3.5">
@@ -1063,7 +1063,7 @@ export const ApportionmentReportsPage: React.FC = () => {
                       <span className="text-slate-700 dark:text-slate-300 font-medium">{item.name}</span>
                     </div>
                     <span className="font-mono font-bold text-slate-900 dark:text-white">
-                      {item.value.toFixed(1)} kL ({((item.value / (totalBulkProcuredKl || 1)) * 100).toFixed(1)}%)
+                      {Number(item.value ?? 0).toFixed(1)} kL ({((Number(item.value ?? 0) / (totalBulkProcuredKl || 1)) * 100).toFixed(1)}%)
                     </span>
                   </div>
                 ))}
@@ -1084,19 +1084,19 @@ export const ApportionmentReportsPage: React.FC = () => {
               <div className="space-y-3.5 text-xs">
                 <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
                   <span className="text-slate-600 dark:text-slate-400">Total Bulk Procurement (Municipal + Tankers):</span>
-                  <span className="font-mono font-bold text-slate-900 dark:text-white">{totalBulkProcuredKl.toFixed(1)} kL</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{Number(totalBulkProcuredKl ?? 0).toFixed(1)} kL</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
                   <span className="text-slate-600 dark:text-slate-400">Total Sub-Metered Household Consumption:</span>
-                  <span className="font-mono font-bold text-sky-600 dark:text-sky-400">{totalMeteredConsumptionKl.toFixed(1)} kL</span>
+                  <span className="font-mono font-bold text-sky-600 dark:text-sky-400">{Number(totalMeteredConsumptionKl ?? 0).toFixed(1)} kL</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
                   <span className="text-slate-600 dark:text-slate-400">Garden, Swimming Pool & Clubhouse Facilities:</span>
-                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{commonFacilityWaterKl.toFixed(1)} kL</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{Number(commonFacilityWaterKl ?? 0).toFixed(1)} kL</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-800">
                   <span className="text-slate-600 dark:text-slate-400">Unaccounted Distribution Variance (Buffer/Loss):</span>
-                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{distributionLossKl.toFixed(1)} kL</span>
+                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{Number(distributionLossKl ?? 0).toFixed(1)} kL</span>
                 </div>
                 <div className="flex justify-between items-center pt-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                   <span>Audit Reconciliation Status:</span>

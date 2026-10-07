@@ -422,11 +422,11 @@ export const BillingInvoicesPage: React.FC = () => {
                   { key: 'flatNumber', label: 'Flat' },
                   { key: 'residentName', label: 'Resident Name' },
                   { key: 'billingMonth', label: 'Billing Month' },
-                  { key: 'consumptionKl', label: 'Consumption (kL)', formatter: (v) => (v ? v.toFixed(2) : '0.00') },
-                  { key: 'baseCharge', label: 'Fixed Base Fee (₹)', formatter: (v) => (v ? `₹${v.toFixed(2)}` : '₹0.00') },
-                  { key: 'meteredCharge', label: 'Tiered Metered Charge (₹)', formatter: (v) => (v ? `₹${v.toFixed(2)}` : '₹0.00') },
-                  { key: 'sharedCharge', label: 'Tanker & Shared Charge (₹)', formatter: (v) => (v ? `₹${v.toFixed(2)}` : '₹0.00') },
-                  { key: 'totalAmount', label: 'Total Amount (₹)', formatter: (v) => (v ? `₹${v.toFixed(2)}` : '₹0.00') },
+                  { key: 'consumptionKl', label: 'Consumption (kL)', formatter: (v) => (v != null ? Number(v).toFixed(2) : '0.00') },
+                  { key: 'baseCharge', label: 'Fixed Base Fee (₹)', formatter: (v) => (v != null ? `₹${Number(v).toFixed(2)}` : '₹0.00') },
+                  { key: 'meteredCharge', label: 'Tiered Metered Charge (₹)', formatter: (v) => (v != null ? `₹${Number(v).toFixed(2)}` : '₹0.00') },
+                  { key: 'sharedCharge', label: 'Tanker & Shared Charge (₹)', formatter: (v) => (v != null ? `₹${Number(v).toFixed(2)}` : '₹0.00') },
+                  { key: 'totalAmount', label: 'Total Amount (₹)', formatter: (v) => (v != null ? `₹${Number(v).toFixed(2)}` : '₹0.00') },
                   { key: 'status', label: 'Status' },
                   { key: 'dueDate', label: 'Due Date' },
                   { key: 'paidAt', label: 'Paid Date' },
@@ -844,12 +844,12 @@ export const BillingInvoicesPage: React.FC = () => {
 
                     {/* Adjustment Column */}
                     <td className="py-3.5 px-4">
-                      {inv.adjustments && inv.adjustments !== 0 ? (
+                      {inv.adjustments != null && inv.adjustments !== 0 ? (
                         <span className={`inline-flex items-center gap-1 font-mono font-bold text-xs ${
                           inv.adjustments < 0 ? 'text-emerald-600' : 'text-rose-600'
                         }`}>
                           {inv.adjustments < 0 ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
-                          ₹{inv.adjustments.toFixed(2)}
+                          ₹{Number(inv.adjustments).toFixed(2)}
                         </span>
                       ) : (
                         <span className="text-slate-400 font-mono text-[11px]">₹0.00</span>
@@ -857,7 +857,7 @@ export const BillingInvoicesPage: React.FC = () => {
                     </td>
 
                     <td className="py-3.5 px-4 font-bold text-sm text-slate-900 dark:text-white">
-                      ₹{inv.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      ₹{Number(inv.totalAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
 
                     <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 text-[11px]">
@@ -1355,12 +1355,12 @@ export const BillingInvoicesPage: React.FC = () => {
                         <td className="py-2 px-2.5 sm:px-3 font-semibold text-slate-900 dark:text-white">{slab.slabName}</td>
                         <td className="py-2 px-2 sm:px-3 font-mono">{slab.volumeBilledKl} kL</td>
                         <td className="py-2 px-2 sm:px-3 font-mono">₹{slab.ratePerKl}/kL</td>
-                        <td className="py-2 px-2.5 sm:px-3 text-right font-bold text-slate-900 dark:text-white">₹{slab.amount.toFixed(2)}</td>
+                        <td className="py-2 px-2.5 sm:px-3 text-right font-bold text-slate-900 dark:text-white">₹{Number(slab.amount ?? 0).toFixed(2)}</td>
                       </tr>
                     ))}
                     <tr className="bg-slate-50/50 dark:bg-slate-800/30 font-bold">
                       <td colSpan={3} className="py-2 px-2.5 sm:px-3 text-slate-700 dark:text-slate-300">Metered Subtotal</td>
-                      <td className="py-2 px-2.5 sm:px-3 text-right text-brand-600 dark:text-brand-400">₹{selectedInvoice.meteredCharge.toFixed(2)}</td>
+                      <td className="py-2 px-2.5 sm:px-3 text-right text-brand-600 dark:text-brand-400">₹{Number(selectedInvoice.meteredCharge ?? 0).toFixed(2)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1374,27 +1374,27 @@ export const BillingInvoicesPage: React.FC = () => {
               </h4>
               <div className="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-600 dark:text-slate-400">Base Connection & Maintenance Fee</span>
-                <span className="font-bold text-slate-900 dark:text-white">₹{selectedInvoice.baseCharge.toFixed(2)}</span>
+                <span className="font-bold text-slate-900 dark:text-white">₹{Number(selectedInvoice.baseCharge ?? 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-start py-1 border-b border-slate-100 dark:border-slate-800 gap-2">
                 <div className="min-w-0 flex-1">
                   <span className="text-slate-600 dark:text-slate-400">Shared Water / Tanker Procurement Share</span>
                   <p className="text-[10px] text-slate-400 mt-0.5 break-words">{selectedInvoice.apportionmentDetails}</p>
                 </div>
-                <span className="font-bold text-slate-900 dark:text-white shrink-0">₹{selectedInvoice.sharedCharge.toFixed(2)}</span>
+                <span className="font-bold text-slate-900 dark:text-white shrink-0">₹{Number(selectedInvoice.sharedCharge ?? 0).toFixed(2)}</span>
               </div>
-              {selectedInvoice.adjustments !== undefined && selectedInvoice.adjustments !== 0 && (
+              {selectedInvoice.adjustments != null && selectedInvoice.adjustments !== 0 && (
                 <div className="flex justify-between items-center py-1 border-b border-slate-100 dark:border-slate-800 font-bold">
                   <span className="text-slate-600 dark:text-slate-400">Special Adjustment / Concession</span>
                   <span className={selectedInvoice.adjustments < 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                    ₹{selectedInvoice.adjustments.toFixed(2)}
+                    ₹{Number(selectedInvoice.adjustments).toFixed(2)}
                   </span>
                 </div>
               )}
               <div className="flex justify-between items-center pt-2 font-bold text-sm sm:text-base text-slate-900 dark:text-white">
                 <span>Total Amount Due</span>
                 <span className="text-brand-600 dark:text-brand-400">
-                  ₹{selectedInvoice.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  ₹{Number(selectedInvoice.totalAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </span>
               </div>
             </div>

@@ -332,7 +332,7 @@ export const MainAdminTariffsPage: React.FC = () => {
           />
           <StatCard
             title="Avg Base Rate (Slab 1)"
-            value={`₹${overview.averageBaseRate.toFixed(2)}`}
+            value={`₹${Number(overview.averageBaseRate ?? 0).toFixed(2)}`}
             subtitle="First 10 kL consumption"
             icon={Droplets}
             iconBgColor="bg-emerald-50 dark:bg-emerald-950/60"
@@ -340,7 +340,7 @@ export const MainAdminTariffsPage: React.FC = () => {
           />
           <StatCard
             title="Avg Mid Rate (Slab 2)"
-            value={`₹${overview.averageMidRate.toFixed(2)}`}
+            value={`₹${Number(overview.averageMidRate ?? 0).toFixed(2)}`}
             subtitle="10 kL – 25 kL usage"
             icon={Layers}
             iconBgColor="bg-amber-50 dark:bg-amber-950/60"
@@ -348,7 +348,7 @@ export const MainAdminTariffsPage: React.FC = () => {
           />
           <StatCard
             title="Avg Surcharge (Slab 3)"
-            value={`₹${overview.averageHigherRate.toFixed(2)}`}
+            value={`₹${Number(overview.averageHigherRate ?? 0).toFixed(2)}`}
             subtitle="Above 25 kL high tier"
             icon={TrendingUp}
             iconBgColor="bg-rose-50 dark:bg-rose-950/60"
@@ -356,7 +356,7 @@ export const MainAdminTariffsPage: React.FC = () => {
           />
           <StatCard
             title="Avg Fixed Maintenance"
-            value={`₹${overview.averageBaseFee.toFixed(0)}`}
+            value={`₹${Number(overview.averageBaseFee ?? 0).toFixed(0)}`}
             subtitle="Base recurring fee/mo"
             icon={IndianRupee}
             iconBgColor="bg-purple-50 dark:bg-purple-950/60"
@@ -503,7 +503,7 @@ export const MainAdminTariffsPage: React.FC = () => {
                 <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900/60">
                   <div className="mb-3 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
                     <span>Volume Apportionment Breakdown ({simVolume} kL Total)</span>
-                    <span>₹{simResult.meteredTotal.toFixed(2)} Metered Charges</span>
+                    <span>₹{Number(simResult.meteredTotal ?? 0).toFixed(2)} Metered Charges</span>
                   </div>
 
                   {/* Progressive Bar */}
@@ -544,7 +544,7 @@ export const MainAdminTariffsPage: React.FC = () => {
                         Slab 1 (Base 0–{selectedSimTariff.baseTierLimitKl}kL)
                       </span>
                       <p className="font-display text-base font-bold text-emerald-800 dark:text-emerald-300">
-                        ₹{simResult.s1Cost.toFixed(2)}
+                        ₹{Number(simResult.s1Cost ?? 0).toFixed(2)}
                       </p>
                       <span className="text-[11px] text-emerald-600 dark:text-emerald-400">
                         {simResult.s1Vol} kL × ₹{selectedSimTariff.baseRatePerKl}
@@ -556,7 +556,7 @@ export const MainAdminTariffsPage: React.FC = () => {
                         Slab 2 ({selectedSimTariff.baseTierLimitKl}–{selectedSimTariff.midTierLimitKl}kL)
                       </span>
                       <p className="font-display text-base font-bold text-amber-800 dark:text-amber-300">
-                        ₹{simResult.s2Cost.toFixed(2)}
+                        ₹{Number(simResult.s2Cost ?? 0).toFixed(2)}
                       </p>
                       <span className="text-[11px] text-amber-600 dark:text-amber-400">
                         {simResult.s2Vol} kL × ₹{selectedSimTariff.midRatePerKl}
@@ -568,7 +568,7 @@ export const MainAdminTariffsPage: React.FC = () => {
                         Slab 3 (&gt;{selectedSimTariff.midTierLimitKl}kL Surge)
                       </span>
                       <p className="font-display text-base font-bold text-rose-800 dark:text-rose-300">
-                        ₹{simResult.s3Cost.toFixed(2)}
+                        ₹{Number(simResult.s3Cost ?? 0).toFixed(2)}
                       </p>
                       <span className="text-[11px] text-rose-600 dark:text-rose-400">
                         {simResult.s3Vol} kL × ₹{selectedSimTariff.higherRatePerKl}
@@ -584,7 +584,7 @@ export const MainAdminTariffsPage: React.FC = () => {
                       Fixed Maintenance Fee
                     </span>
                     <p className="mt-1 font-display text-xl font-bold text-slate-800 dark:text-slate-200">
-                      ₹{simResult.baseFee.toFixed(2)}
+                      ₹{Number(simResult.baseFee ?? 0).toFixed(2)}
                     </p>
                     <span className="text-[11px] text-slate-400">Monthly flat recurring</span>
                   </div>
@@ -594,7 +594,7 @@ export const MainAdminTariffsPage: React.FC = () => {
                       Effective Unit Rate
                     </span>
                     <p className="mt-1 font-display text-xl font-bold text-blue-700 dark:text-blue-300">
-                      ₹{simResult.avgRate.toFixed(2)}{' '}
+                      ₹{Number(simResult.avgRate ?? 0).toFixed(2)}{' '}
                       <span className="text-xs font-normal text-blue-600/70">/kL</span>
                     </p>
                     <span className="text-[11px] text-blue-600/80 dark:text-blue-400">Metered avg rate</span>
@@ -603,7 +603,7 @@ export const MainAdminTariffsPage: React.FC = () => {
                   <div className="rounded-2xl border border-blue-600 bg-blue-600 p-4 text-center text-white shadow-md shadow-blue-500/20 dark:bg-blue-600">
                     <span className="text-xs font-semibold text-blue-100">Total Simulated Bill</span>
                     <p className="mt-1 font-display text-2xl font-black text-white">
-                      ₹{simResult.grandTotal.toFixed(2)}
+                      ₹{Number(simResult.grandTotal ?? 0).toFixed(2)}
                     </p>
                     <span className="text-[11px] text-blue-200">Metered + Base Fee</span>
                   </div>
@@ -627,35 +627,35 @@ export const MainAdminTariffsPage: React.FC = () => {
                           </span>
                         </div>
                         <span className="rounded-lg bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
-                          ₹{bill.grandTotal.toFixed(0)}
+                          ₹{Number(bill.grandTotal ?? 0).toFixed(0)}
                         </span>
                       </div>
 
                       <div className="mt-3 space-y-1.5 text-xs">
                         <div className="flex justify-between text-slate-600 dark:text-slate-300">
                           <span>Slab 1 ({bill.s1Vol}kL @ ₹{apt.baseRatePerKl}):</span>
-                          <span className="font-semibold">₹{bill.s1Cost.toFixed(2)}</span>
+                          <span className="font-semibold">₹{Number(bill.s1Cost ?? 0).toFixed(2)}</span>
                         </div>
                         {bill.s2Vol > 0 && (
                           <div className="flex justify-between text-slate-600 dark:text-slate-300">
                             <span>Slab 2 ({bill.s2Vol}kL @ ₹{apt.midRatePerKl}):</span>
-                            <span className="font-semibold">₹{bill.s2Cost.toFixed(2)}</span>
+                            <span className="font-semibold">₹{Number(bill.s2Cost ?? 0).toFixed(2)}</span>
                           </div>
                         )}
                         {bill.s3Vol > 0 && (
                           <div className="flex justify-between text-rose-600 dark:text-rose-400 font-medium">
                             <span>Slab 3 ({bill.s3Vol}kL @ ₹{apt.higherRatePerKl}):</span>
-                            <span>₹{bill.s3Cost.toFixed(2)}</span>
+                            <span>₹{Number(bill.s3Cost ?? 0).toFixed(2)}</span>
                           </div>
                         )}
                         <div className="flex justify-between text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800">
                           <span>Fixed Base Fee:</span>
-                          <span>₹{bill.baseFee.toFixed(2)}</span>
+                          <span>₹{Number(bill.baseFee ?? 0).toFixed(2)}</span>
                         </div>
                       </div>
 
                       <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                        <span>Effective Rate: ₹{bill.avgRate.toFixed(2)}/kL</span>
+                        <span>Effective Rate: ₹{Number(bill.avgRate ?? 0).toFixed(2)}/kL</span>
                         <button
                           onClick={() => openEditModal(apt)}
                           className="font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400"
