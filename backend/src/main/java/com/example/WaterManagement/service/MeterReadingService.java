@@ -146,8 +146,8 @@ public class MeterReadingService {
             }
             return meterReadingKl - priorLog.getMeterReadingKl();
         } else {
-            // First reading ever for this household: consumption is 0.0
-            return 0.0;
+            // First reading ever for this household: baseline is 0.0 kL, so consumption is the entire reading value
+            return meterReadingKl;
         }
     }
 

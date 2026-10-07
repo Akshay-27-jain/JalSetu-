@@ -119,7 +119,7 @@ export const MeterReadingsPage: React.FC = () => {
         liveConsumptionPreview = `${(currentReadingNum - priorReading).toFixed(2)} kL`;
       }
     } else {
-      liveConsumptionPreview = `0.00 kL (Initial Household Baseline)`;
+      liveConsumptionPreview = `${currentReadingNum.toFixed(2)} kL (Baseline: 0.00 kL)`;
     }
   }
 

@@ -73,7 +73,7 @@ export const UsageHistoryPage: React.FC = () => {
         livePreview = `${(currentReadingNum - latestPrior).toFixed(2)} kL`;
       }
     } else {
-      livePreview = `0.00 kL (Initial Household Baseline)`;
+      livePreview = `${currentReadingNum.toFixed(2)} kL (Baseline: 0.00 kL)`;
     }
   }
 

@@ -70,8 +70,8 @@ public class MeterReadingServiceTest {
     }
 
     @Test
-    @DisplayName("Initial meter reading should auto-calculate 0.0 kL consumption")
-    void testFirstMeterReading_CalculatesZeroConsumption() {
+    @DisplayName("Initial meter reading should calculate consumption from 0.0 kL baseline")
+    void testFirstMeterReading_CalculatesConsumptionFromZeroBaseline() {
         LocalDate date = LocalDate.of(2026, 8, 1);
         Double readingValue = 100.0;
 
@@ -97,7 +97,7 @@ public class MeterReadingServiceTest {
 
         assertNotNull(response);
         assertEquals(100.0, response.getMeterReadingKl());
-        assertEquals(0.0, response.getConsumptionKl(), "First reading consumption must be 0.0");
+        assertEquals(100.0, response.getConsumptionKl(), "First reading consumption must be relative to 0.0 baseline");
         assertEquals(UsageSource.MANUAL, response.getSource());
         verify(waterUsageLogRepository, times(1)).save(any(WaterUsageLog.class));
     }
