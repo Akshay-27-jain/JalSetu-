@@ -432,7 +432,7 @@ export const MainAdminDashboard: React.FC = () => {
                   required
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="admin@palmmeadows.com"
+                  placeholder="admin@society.org"
                   className="input-field"
                 />
               </div>

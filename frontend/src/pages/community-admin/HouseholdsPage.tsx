@@ -60,7 +60,7 @@ export const HouseholdsPage: React.FC = () => {
   const [residentFullName, setResidentFullName] = useState('');
   const [residentEmail, setResidentEmail] = useState('');
   const [residentPhone, setResidentPhone] = useState('');
-  const [residentPassword, setResidentPassword] = useState('Resident@123');
+  const [residentPassword, setResidentPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   // 3 Mandatory Verification Documents State (Add Modal)
@@ -154,13 +154,17 @@ export const HouseholdsPage: React.FC = () => {
     setTimeout(() => setCopiedCode(null), 2500);
   };
 
-  const generateRandomPassword = () => {
+  const generateRandomPasswordString = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$';
     let pass = 'Res@';
     for (let i = 0; i < 5; i++) {
       pass += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    setResidentPassword(pass);
+    return pass;
+  };
+
+  const generateRandomPassword = () => {
+    setResidentPassword(generateRandomPasswordString());
   };
 
   const handleFlatChange = (val: string) => {
@@ -243,6 +247,11 @@ export const HouseholdsPage: React.FC = () => {
       setSubmitting(true);
       setModalError(null);
 
+      let finalResidentPassword = residentPassword.trim();
+      if (hasResident && !finalResidentPassword) {
+        finalResidentPassword = generateRandomPasswordString();
+      }
+
       const res = await communityAdminApi.createHousehold({
         flatNumber: flatNumber.trim().toUpperCase(),
         meterSerialNumber: meterSerialNumber.trim() || undefined,
@@ -252,7 +261,7 @@ export const HouseholdsPage: React.FC = () => {
         residentFullName: residentFullName.trim() || undefined,
         residentEmail: residentEmail.trim().toLowerCase() || undefined,
         residentPhone: residentPhone.trim() || undefined,
-        residentPassword: residentPassword.trim() || undefined,
+        residentPassword: finalResidentPassword || undefined,
         doc1Type: hasResident ? doc1Type : undefined,
         doc1FileName: hasResident ? doc1FileName : undefined,
         doc1Base64: hasResident ? doc1Base64 : undefined,
@@ -274,7 +283,7 @@ export const HouseholdsPage: React.FC = () => {
           residentName: res.residentName || residentFullName || 'Resident',
           residentEmail: res.residentEmail || residentEmail,
           residentPhone: res.residentPhone || residentPhone,
-          temporaryPassword: residentPassword,
+          temporaryPassword: finalResidentPassword,
           inviteCode: res.inviteCode,
           status: res.status || 'PENDING_APPROVAL',
         });
@@ -288,7 +297,7 @@ export const HouseholdsPage: React.FC = () => {
       setResidentFullName('');
       setResidentEmail('');
       setResidentPhone('');
-      setResidentPassword('Resident@123');
+      setResidentPassword('');
       setDoc1FileName('');
       setDoc1Base64(undefined);
       setDoc2FileName('');

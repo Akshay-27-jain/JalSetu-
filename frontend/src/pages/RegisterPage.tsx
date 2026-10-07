@@ -138,11 +138,8 @@ export const RegisterPage: React.FC = () => {
 
       if (!communityName) setCommunityName(type === 'authentic' ? 'Palm Meadows Residences' : (type === 'duplicate' ? 'Duplicate Test Society' : 'Sample Silicon Palms'));
       if (!fullName) setFullName('Vikram Malhotra');
-      if (!email) setEmail(type === 'authentic' ? 'vikram.malhotra@palmmeadows.com' : (type === 'duplicate' ? 'duplicate_test@palmmeadows.com' : 'demo_admin@test.com'));
+      if (!email) setEmail(type === 'authentic' ? 'applicant.sample@housingboard.org' : (type === 'duplicate' ? 'duplicate.test@housingboard.org' : 'test.admin@housingboard.org'));
       if (!address) setAddress('Sector 4, Bangalore');
-      if (!password) {
-        setPassword('Admin@12345');
-      }
 
       if (type === 'duplicate') {
         setError('⚠️ Notice: Loaded 3 duplicate files. Submitting this will trigger AI duplicate fraud detection (REJECTED_FAKE, Score: 15%).');

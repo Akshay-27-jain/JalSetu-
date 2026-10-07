@@ -365,12 +365,11 @@ export const FloatingAssistant: React.FC = () => {
       '- When asked about a SPECIFIC community (e.g. "paras garden", "palm meadows", "green oaks"), answer ONLY with that community\'s specific data (exact flat count, address, admin, meter details). Do NOT output the generic multi-community platform overview unless the user specifically asks for the entire platform or all communities.\n' +
       '- When asked about a SPECIFIC flat or resident (e.g. "PG-101", "A-102", "B-201"), provide details for that exact flat.\n' +
       '- When asked for a platform summary or comparison across all societies, provide structured markdown tables.\n\n' +
-      'PLATFORM DOMAIN KNOWLEDGE & LIVE PLATFORM DATA:\n' +
-      '1. Demo & Pre-Seeded Accounts:\n' +
-      '   - Platform Owner (Main Admin): admin@aquatrack.com / Admin@12345 (Master console across all communities)\n' +
-      '   - Community Admin (Paras Garden): admin@parasgarden.com / Admin@12345 (24 flats, meter audits, tanker deliveries, 2σ leak scans)\n' +
-      '   - Community Admin (Palm Meadows): admin@palmmeadows.com / Admin@12345\n' +
-      '   - Resident (Flat A-102): aryan@parasgarden.com / Admin@12345 (Usage graphs, Razorpay bill payments, leak checks)\n\n' +
+      'PLATFORM DOMAIN KNOWLEDGE & ARCHITECTURE:\n' +
+      '1. Platform User Roles & Capabilities:\n' +
+      '   - Platform Owner (Main Admin): Master console across all communities, global tariffs & platform metrics\n' +
+      '   - Community Admin: Society operations, flat registers, meter audits, tanker deliveries, billing cycles & 2σ leak scans\n' +
+      '   - Resident: Resident portal, real-time water usage charts, bill payments & anomaly alerts\n\n' +
       '2. Monitored Residential Communities & Pricing Tariffs:\n' +
       '   - Green Valley: Base Slab (0-10 kL) ₹15/kL, Mid Slab (10-25 kL) ₹25/kL, Surge Slab (>25 kL) ₹45/kL, Fixed Fee ₹120/mo.\n' +
       '   - Paras Garden: Base Slab (0-10 kL) ₹18/kL, Mid Slab (10-25 kL) ₹28/kL, Surge Slab (>25 kL) ₹50/kL, Fixed Fee ₹150/mo.\n' +
@@ -475,7 +474,7 @@ export const FloatingAssistant: React.FC = () => {
         total: 36,
         reg: 4,
         admin: 'Suresh Gupta',
-        email: 'admin@parasgarden.com',
+        email: 'office@parasgarden.org',
         address: 'Plot 14B, Kundalahalli Main Road, Whitefield, Bangalore',
         base: 18,
         mid: 28,
@@ -523,7 +522,7 @@ export const FloatingAssistant: React.FC = () => {
         total: 24,
         reg: 8,
         admin: 'Robert Vance',
-        email: 'admin@palmmeadows.com',
+        email: 'office@palmmeadows.org',
         address: '77 Green Valley Road, Sector 4, Bangalore',
         base: 20,
         mid: 30,
@@ -1054,15 +1053,12 @@ export const FloatingAssistant: React.FC = () => {
     // Demo Logins & Credentials
     if (lower.includes('demo') || lower.includes('credential') || lower.includes('test account') || lower.includes('sample login')) {
       return (
-        '### ⚡ JalSetu Demo & Test Login Credentials\n\n' +
-        'You can test the platform across all role levels using these pre-configured demo credentials:\n\n' +
-        '| Role | Email Address | Password | Access Level |\n' +
-        '| :--- | :--- | :---: | :--- |\n' +
-        '| 👑 **Platform Owner (Main Admin)** | `admin@aquatrack.com` | `Admin@12345` | Master console across all communities, cross-society tariffs & platform metrics |\n' +
-        '| 👔 **Community Admin (Paras Garden)** | `admin@parasgarden.com` | `Admin@12345` | Society operations: 24 flats, meter audits, tanker deliveries, billing cycles & 2σ leak scans |\n' +
-        '| 👔 **Community Admin (Palm Meadows)** | `admin@palmmeadows.com` | `Admin@12345` | Palm Meadows society administration and tariff configurations |\n' +
-        '| 👤 **Resident (Flat A-102)** | `aryan@parasgarden.com` | `Admin@12345` | Resident portal: Live water usage graphs, Razorpay bill payments & personal leak risks |\n\n' +
-        '👉 *Enter these credentials on the **Sign In** screen to test live features!*'
+        '### 🔒 JalSetu Account Security Policy\n\n' +
+        'For platform data protection and resident privacy, live account credentials are not distributed in open chat.\n\n' +
+        '- **Platform Owner (Main Admin):** Accessible strictly to authorized platform operators.\n' +
+        '- **Community Admins:** Created during verified housing society onboarding or authorized by the platform owner.\n' +
+        '- **Residents:** Onboarded securely by their Community Admin and receive temporary credentials via registered private email.\n\n' +
+        '👉 *To sign in, please use your registered credentials on the [Sign In](/login) portal.*'
       );
     }
 
@@ -1079,7 +1075,7 @@ export const FloatingAssistant: React.FC = () => {
         '   - Enter your **society admin email** and password created during community registration.\n' +
         '   - Access household management, sub-meter logs, bulk water tanker apportionments, and invoice generation.\n\n' +
         '3. 👑 **For Platform Admins:**\n' +
-        '   - Sign in with master platform credentials (`admin@aquatrack.com`) to oversee all housing societies.\n\n' +
+        '   - Sign in with authorized platform administrator credentials to oversee registered housing societies.\n\n' +
         '👉 *Need to register a new community? Click **Register Community Admin** below the login form.*'
       );
     }
