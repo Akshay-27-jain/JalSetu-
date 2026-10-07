@@ -33,9 +33,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0B1120] text-slate-800 dark:text-slate-100 flex flex-row w-full overflow-x-hidden transition-colors duration-200">
-      {/* Desktop Sticky macOS Glass Sidebar (In-flow flex layout to never overlap) */}
+      {/* Desktop Fixed Sidebar (Pinned firmly to viewport in web & PWA, never moves when scrolling) */}
       <aside
-        className={`sticky top-0 h-screen z-30 hidden lg:flex flex-col shrink-0 p-3 transition-all duration-300 ${
+        className={`fixed top-0 bottom-0 left-0 z-30 hidden lg:flex flex-col shrink-0 p-3 h-screen h-[100dvh] transition-all duration-300 ${
           isCollapsed ? 'w-[88px]' : 'w-72 xl:w-80'
         }`}
       >
@@ -53,7 +53,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="fixed inset-y-0 left-0 w-76 max-w-[85vw] p-3 shadow-2xl animate-fade-in z-50">
+          <aside className="fixed inset-y-0 left-0 w-76 max-w-[85vw] p-3 shadow-2xl animate-fade-in z-50 h-screen h-[100dvh]">
             <Sidebar
               role={role}
               onCloseMobile={() => setMobileOpen(false)}
@@ -63,8 +63,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         </div>
       )}
 
-      {/* Main Content Area - Expands & Adapts to any Screen */}
-      <div className="flex-1 min-w-0 flex flex-col min-h-screen w-full transition-all duration-300">
+      {/* Main Content Area - Smoothly offset by Sidebar width on Desktop */}
+      <div
+        className={`flex-1 min-w-0 flex flex-col min-h-screen w-full transition-all duration-300 ${
+          isCollapsed ? 'lg:pl-[88px]' : 'lg:pl-72 xl:lg:pl-80'
+        }`}
+      >
         <PageHeader
           title={title}
           subtitle={subtitle}

@@ -369,7 +369,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div
-      className={`relative flex h-full max-h-[calc(100vh-24px)] w-full flex-col overflow-visible rounded-3xl border border-slate-200/90 bg-white text-slate-800 shadow-xl backdrop-blur-2xl transition-all duration-300 dark:border-slate-800/80 dark:bg-[#131B2E] dark:text-slate-200 ${
+      className={`relative flex h-full max-h-[calc(100dvh-24px)] w-full flex-col overflow-visible rounded-3xl border border-slate-200/90 bg-white text-slate-800 shadow-xl backdrop-blur-2xl transition-all duration-300 dark:border-slate-800/80 dark:bg-[#131B2E] dark:text-slate-200 ${
         isCollapsed ? 'p-2' : 'p-3.5'
       }`}
     >
