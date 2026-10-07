@@ -1,0 +1,11 @@
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Declare binary files so git will never touch line endings or corrupt them
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.jar binary
+*.war binary

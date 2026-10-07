@@ -68,8 +68,10 @@ logs/
 
 # Scratch & Temporary Test Files
 scratch/
+scratch_pages/
 test-documents/
 *.pdf
+!Infosys_Springboard_Internship_7.0_Completion_Report_Akshay_Jain.pdf
 temp_repo/
 *.tmp
 reference/
