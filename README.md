@@ -80,10 +80,4 @@ JalSetu/
 - **Zero Secrets in Git:** All API keys, tokens, passwords, and private certificates are strictly excluded from version control.
 - **Config Overrides:** Sensitive local settings reside in `application-local.properties` and `.env`, protected by `.gitignore`.
 
----
-
-## 📄 Internship Documentation
-- **Official Completion Report:** [`Infosys_Springboard_Internship_7.0_Completion_Report_Akshay_Jain.pdf`](./Infosys_Springboard_Internship_7.0_Completion_Report_Akshay_Jain.pdf)
-- **Author:** Akshay Jain
-- **Program:** Infosys Springboard Virtual Internship 7.0 (19-Aug-2026 to 13-Oct-2026)
 
