@@ -126,6 +126,14 @@ def build_completion_report(output_pdf_path):
         textColor=TEXT_DARK
     )
 
+    name_style = ParagraphStyle(
+        'NameStyle',
+        fontName='Helvetica',
+        fontSize=8,
+        leading=10.5,
+        textColor=TEXT_DARK
+    )
+
     sec_heading = ParagraphStyle(
         'SecHeading',
         fontName='Helvetica-Bold',
@@ -134,6 +142,17 @@ def build_completion_report(output_pdf_path):
         textColor=NAVY,
         spaceBefore=7,
         spaceAfter=2,
+        keepWithNext=True
+    )
+
+    role_heading = ParagraphStyle(
+        'RoleHeading',
+        fontName='Helvetica-Bold',
+        fontSize=9,
+        leading=12,
+        textColor=PRIMARY,
+        spaceBefore=2,
+        spaceAfter=3,
         keepWithNext=True
     )
 
@@ -217,18 +236,57 @@ def build_completion_report(output_pdf_path):
     # ==================== PAGE 1 ====================
     story.append(Paragraph("Infosys Springboard Virtual Internship 7.0", title_style))
     story.append(Paragraph("Completion Report", subtitle_style))
-    story.append(HRFlowable(width="100%", thickness=1, color=BORDER_COLOR, spaceBefore=2, spaceAfter=6))
+    story.append(HRFlowable(width="100%", thickness=1, color=BORDER_COLOR, spaceBefore=2, spaceAfter=5))
 
     # Team Details
     story.append(Paragraph("<b>Team Details</b> <font size='7.5' color='#64748B'>&lt;Do not mention any personally identifiable information like email ID, institute details, mobile phone number etc.&gt;</font>", team_details_header))
     
+    # 18 Team Interns as officially registered and confirmed by Mentor 273
+    intern_names = [
+        "1. Sowmiya V",
+        "2. Bhargavi Sripathi",
+        "3. Aishwarya K.G",
+        "4. Vadde Maheshwari",
+        "5. Busa Yaswanth",
+        "6. Gopidesi Pujitha",
+        "7. Gabbur Sripurna",
+        "8. Vijay Rodge",
+        "9. Akshay Jain",
+        "10. Manukonda Ramya Sri",
+        "11. Shaikh Mehvish",
+        "12. Masimukku Vidya Sagar",
+        "13. Niranjan J",
+        "14. Yerramsetti Krishna Sri Charan",
+        "15. Himanshu",
+        "16. Gulam Shabbir Khan",
+        "17. Ramagiri Siddabi",
+        "18. Kiranmai Gangotree Yellapu"
+    ]
+
+    names_subtable_data = [
+        [
+            Paragraph(intern_names[i], name_style),
+            Paragraph(intern_names[i + 6], name_style),
+            Paragraph(intern_names[i + 12], name_style)
+        ]
+        for i in range(6)
+    ]
+    names_subtable = Table(names_subtable_data, colWidths=[130, 135, 140])
+    names_subtable.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('TOPPADDING', (0,0), (-1,-1), 0.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 0.5),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 2),
+    ]))
+
     meta_table_data = [
         [Paragraph("<b>Batch Number</b>", meta_label), Paragraph(": Batch 7.0 (Virtual Internship 2026)", meta_val)],
         [Paragraph("<b>Start date</b>", meta_label), Paragraph(": 19th August 2026", meta_val)],
-        [Paragraph("<b>Names:</b>", meta_label), Paragraph(": Akshay Jain", meta_val)],
-        [Paragraph("<b>Internship Duration:</b>", meta_label), Paragraph(": 8 Weeks (19-Aug-2026 to 13-Oct-2026)", meta_val)],
+        [Paragraph("<b>Internship Duration</b>", meta_label), Paragraph(": 8 Weeks (19-Aug-2026 to 13-Oct-2026)", meta_val)],
+        [Paragraph("<b>Names (Team Interns)</b>", meta_label), names_subtable],
     ]
-    meta_table = Table(meta_table_data, colWidths=[120, 395])
+    meta_table = Table(meta_table_data, colWidths=[110, 405])
     meta_table.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('TOPPADDING', (0,0), (-1,-1), 1),
@@ -237,7 +295,7 @@ def build_completion_report(output_pdf_path):
         ('RIGHTPADDING', (0,0), (-1,-1), 0),
     ]))
     story.append(meta_table)
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3))
 
     # 1. Project Title
     story.append(Paragraph("1. Project Title", sec_heading))
@@ -470,58 +528,81 @@ def build_completion_report(output_pdf_path):
     story.append(Paragraph("Include relevant visuals such as screenshots of work done, dashboards, code snippets, or designs.", sec_subprompt))
 
     img_folder = r"C:\Users\Akshay Jain\.gemini\antigravity\brain\3ef4e7d2-29ee-497a-8272-3a9a479e7b13\.user_uploaded"
-    img1_path = os.path.join(img_folder, "media_1791480940801.png") # Resident Portal Overview & AI Insight
-    img2_path = os.path.join(img_folder, "media_1791480955552.png") # Peer Benchmarking & Conservation Score
-    img3_path = os.path.join(img_folder, "media_1791480965988.png") # Resident Daily Readings Log
-    img4_path = os.path.join(img_folder, "media_1791480995785.png") # Community Admin Overview & Top 6 Flats Stats
-    img5_path = os.path.join(img_folder, "media_1791481005756.png") # Community-Wide Recent Usage Logs & Overuse Alerts
+    
+    # Images for all 3 roles
+    img_main1 = os.path.join(img_folder, "media_1791481814921.png")  # Main Admin Platform Owner Dashboard
+    img_main2 = os.path.join(img_folder, "media_1791481837946.png")  # Main Admin Society Admins Directory & 3-Doc Approval
+    img_comm1 = os.path.join(img_folder, "media_1791480995785.png")  # Community Admin Overview & Top 6 Flats Stats
+    img_comm2 = os.path.join(img_folder, "media_1791481005756.png")  # Community-Wide Recent Usage Logs & Overuse Alerts
+    img_res1  = os.path.join(img_folder, "media_1791480940801.png")  # Resident Portal Overview & AI Insight
+    img_res2  = os.path.join(img_folder, "media_1791480955552.png")  # Peer Benchmarking & Conservation Score
 
-    # Figure 1: Resident Portal Overview
-    if os.path.exists(img1_path):
+    # Role 1: Main Admin Console (Page 4)
+    story.append(Paragraph("Role Console 1: Main Admin (Platform Super-Admin Governance)", role_heading))
+
+    # Figure 1: Main Admin Overview & System Telemetry Metrics
+    if os.path.exists(img_main1):
         story.append(KeepTogether([
-            Image(img1_path, width=480, height=255),
-            Paragraph("<b>Figure 1:</b> Resident Water Portal — Welcome Console for Flat A-220, displaying real-time monthly usage (4.23 kL), last meter reading telemetry (467.67 kL), Gemini AI Water Conservation Insights (~Rs. 151/mo target savings), and daily consumption trends.", caption_style)
+            Image(img_main1, width=480, height=230),
+            Paragraph("<b>Figure 1:</b> Main Admin Platform Owner Dashboard — Centralized cross-community management console displaying platform-wide telemetry metrics (14 active communities, 37 tracked households, 57 platform users, and 188.12 kL cumulative consumption) alongside the active Apartment Communities Directory.", caption_style)
         ]))
         story.append(Spacer(1, 4))
 
-    # Figure 2: Conservation Score & Peer Benchmarking
-    if os.path.exists(img2_path):
+    # Figure 2: Main Admin Society Governance & Compliance Directory
+    if os.path.exists(img_main2):
         story.append(KeepTogether([
-            Image(img2_path, width=480, height=255),
-            Paragraph("<b>Figure 2:</b> Resident Conservation Score & Peer Benchmarking — Highlighting the Grade A+ 'Water Conservation Champion' badge (96/100 score), comparative 3-person peer usage benchmarking, and actionable water-saving micro-targets.", caption_style)
+            Image(img_main2, width=480, height=230),
+            Paragraph("<b>Figure 2:</b> Main Admin Society Governance & Compliance Directory — Central administration interface managing 14 authorized society managers, monitoring flat capacity vs. occupancy rates, tracking active sub-meters, and overseeing the 13 pending 3-document anti-fraud verification workflows.", caption_style)
         ]))
 
     # ==================== PAGE 5 ====================
     story.append(PageBreak())
 
-    # Figure 3: Resident Daily Readings Log
-    if os.path.exists(img3_path):
-        story.append(KeepTogether([
-            Image(img3_path, width=480, height=255),
-            Paragraph("<b>Figure 3:</b> Resident Daily Meter Readings Log — Itemized telemetry audit trail detailing chronological meter readings, individual daily consumption calculations (kL), telemetry sources (Manual/IoT), and operational status.", caption_style)
-        ]))
-        story.append(Spacer(1, 8))
+    # Role 2: Community Admin Console (Page 5)
+    story.append(Paragraph("Role Console 2: Community Admin (Society Operations & Meter Telemetry)", role_heading))
 
-    # Figure 4: Community Admin Overview & Top 6 Flats Stats
-    if os.path.exists(img4_path):
+    # Figure 3: Community Admin Overview & Top 6 Flats Stats
+    if os.path.exists(img_comm1):
         story.append(KeepTogether([
-            Image(img4_path, width=480, height=255),
-            Paragraph("<b>Figure 4:</b> Community Admin Operations Dashboard (Paras Garden) — Society-level KPIs including 16 metered households, 78.61 kL monthly consumption, top 6 consumer breakdown bar chart, and real-time Razorpay payment and overuse alerts.", caption_style)
+            Image(img_comm1, width=480, height=240),
+            Paragraph("<b>Figure 3:</b> Community Admin Operations Dashboard (Paras Garden) — Society-level operational metrics including 16 metered households, 78.61 kL monthly consumption, top 6 consumer breakdown bar chart, and real-time Razorpay payment and overuse alerts.", caption_style)
+        ]))
+        story.append(Spacer(1, 6))
+
+    # Figure 4: Community-Wide Recent Usage Logs
+    if os.path.exists(img_comm2):
+        story.append(KeepTogether([
+            Image(img_comm2, width=480, height=240),
+            Paragraph("<b>Figure 4:</b> Community Admin Household Usage Telemetry Stream — Comprehensive society-wide meter reading logs with automated status classification (Normal vs. Overuse), flat units, and exportable CSV audit records.", caption_style)
         ]))
 
     # ==================== PAGE 6 ====================
     story.append(PageBreak())
 
-    # Figure 5: Community-Wide Recent Usage Logs
-    if os.path.exists(img5_path):
+    # Role 3: Resident Portal Console (Page 6)
+    story.append(Paragraph("Role Console 3: Resident Portal (Household Water Portal & AI Conservation Insights)", role_heading))
+
+    # Figure 5: Resident Portal Overview
+    if os.path.exists(img_res1):
         story.append(KeepTogether([
-            Image(img5_path, width=480, height=250),
-            Paragraph("<b>Figure 5:</b> Community Admin Household Usage Telemetry Stream — Comprehensive society-wide meter reading logs with automated status classification (Normal vs. Overuse), flat units, and exportable CSV audit records.", caption_style)
+            Image(img_res1, width=480, height=240),
+            Paragraph("<b>Figure 5:</b> Resident Water Portal — Welcome Console for Flat A-220, displaying real-time monthly usage (4.23 kL), last meter reading telemetry (467.67 kL), Gemini AI Water Conservation Insights (~Rs. 151/mo target savings), and daily consumption trends.", caption_style)
         ]))
         story.append(Spacer(1, 6))
 
+    # Figure 6: Conservation Score & Peer Benchmarking
+    if os.path.exists(img_res2):
+        story.append(KeepTogether([
+            Image(img_res2, width=480, height=240),
+            Paragraph("<b>Figure 6:</b> Resident Conservation Score & Peer Benchmarking — Highlighting the Grade A+ 'Water Conservation Champion' badge (96/100 score), comparative 3-person peer usage benchmarking, and actionable water-saving micro-targets.", caption_style)
+        ]))
+
+    # ==================== PAGE 7 ====================
+    story.append(PageBreak())
+
     # 7. Challenges Faced
-    story.append(Paragraph("7. Challenges Faced", sec_heading))
+    challenges_heading = ParagraphStyle('ChallengesHeading', parent=sec_heading, spaceBefore=0)
+    story.append(Paragraph("7. Challenges Faced", challenges_heading))
     story.append(Paragraph("List and explain any technical, operational, or communication challenges encountered during the internship. Mention how they were resolved or mitigated.", sec_subprompt))
     story.append(Paragraph(
         "<b>Challenge 1: Hybrid Apportionment Mathematics for Partially-Metered Societies</b><br/>"
@@ -548,12 +629,8 @@ def build_completion_report(output_pdf_path):
         body_tight
     ))
 
-    # ==================== PAGE 7 ====================
-    story.append(PageBreak())
-
     # 8. Learnings & Skills Acquired
-    learnings_heading = ParagraphStyle('LearningsHeading', parent=sec_heading, spaceBefore=0)
-    story.append(Paragraph("8. Learnings & Skills Acquired", learnings_heading))
+    story.append(Paragraph("8. Learnings & Skills Acquired", sec_heading))
     story.append(Paragraph("Highlight the key takeaways from the internship. Mention any tools, technologies, soft skills, or domain knowledge gained.", sec_subprompt))
     story.append(Paragraph("• <b>Advanced Backend Engineering in Java 21 & Spring Boot 3:</b> Mastered enterprise application architecture, dependency injection, JPA/Hibernate relationship mapping, DTO pattern design, custom exception handling, and Spring Security filter chains.", bullet_style))
     story.append(Paragraph("• <b>Full-Stack Reactive Frontend Development:</b> Gained deep proficiency in React 18 with TypeScript, Vite build optimization, custom hooks, centralized Axios interceptors, responsive styling with Tailwind CSS, and telemetry data visualization via Recharts.", bullet_style))
@@ -563,16 +640,20 @@ def build_completion_report(output_pdf_path):
     story.append(Paragraph("• <b>Agile Engineering & Soft Skills:</b> Enhanced capabilities in modular task decomposition, sprint scheduling, Git branch management, clean code documentation, empathetic UI/UX design, and professional technical writing.", bullet_style))
     story.append(Paragraph("• <b>Domain Knowledge in Smart Cities & Sustainability:</b> Acquired domain insights into Indian urban water supply systems, CPHEEO 135 LPCD benchmarks, multi-dwelling sub-metering infrastructure, and tariff slab economics.", bullet_style))
 
+    # ==================== PAGE 8 ====================
+    story.append(PageBreak())
+
     # 9. Testimonials from team
-    story.append(Paragraph("9. Testimonials from team", sec_heading))
+    testimonials_heading = ParagraphStyle('TestimonialsHeading', parent=sec_heading, spaceBefore=0)
+    story.append(Paragraph("9. Testimonials from team", testimonials_heading))
     story.append(Paragraph("Share your experience / success points.", sec_subprompt))
     story.append(Paragraph(
-        "<i>\"Developing the JalSetu platform during the Infosys Springboard Virtual Internship 7.0 has been an immensely transformative and rewarding experience. "
-        "Transitioning from academic theory to architecting a production-grade, end-to-end full-stack software system challenged me to elevate my standards of code quality, architecture, and user empathy. "
+        "<i>\"Developing the JalSetu platform during the Infosys Springboard Virtual Internship 7.0 has been an immensely transformative and rewarding experience for our entire team. "
+        "Transitioning from academic theory to architecting a production-grade, end-to-end full-stack software system challenged us to elevate our standards of code quality, architecture, and user empathy. "
         "The most exhilarating milestone was witnessing the entire data pipeline synchronize seamlessly—from simulating IoT water meter pulses in the background, computing tiered tariffs and generating cryptographic PDF invoices, to completing instant digital settlements through Razorpay with automated reconciliation. "
-        "Building the AI document authenticity engine and solving the hybrid apportionment math gave me immense confidence in tackling complex algorithmic challenges independently. "
-        "This internship has reinforced my passion for building mission-critical software that delivers tangible, positive environmental and societal impact.\"</i><br/>"
-        "<b>— Akshay Jain (Intern, Infosys Springboard Virtual Internship 7.0)</b>",
+        "Building the AI document authenticity engine and solving the hybrid apportionment math gave us immense confidence in tackling complex algorithmic challenges collaboratively. "
+        "This internship has reinforced our collective passion for building mission-critical software that delivers tangible, positive environmental and societal impact across urban communities.\"</i><br/>"
+        "<b>— Akshay Jain & JalSetu Project Team (Infosys Springboard Virtual Internship 7.0, Batch 7.0)</b>",
         body
     ))
 
@@ -581,9 +662,9 @@ def build_completion_report(output_pdf_path):
     story.append(Paragraph("Summarize the overall experience, impact of the internship, and how it aligns with your academic or career goals.", sec_subprompt))
     story.append(Paragraph(
         "The Infosys Springboard Virtual Internship 7.0 provided an exceptional opportunity to engineer an enterprise-grade platform addressing one of the most critical urban challenges of our time: sustainable water stewardship. "
-        "Through <b>JalSetu</b>, I succeeded in delivering an end-to-end software solution that bridges IoT hardware telemetry, automated financial billing, and AI-driven governance into a unified, responsive platform. "
+        "Through <b>JalSetu</b>, our team succeeded in delivering an end-to-end software solution that bridges IoT hardware telemetry, automated financial billing, and AI-driven governance into a unified, responsive platform. "
         "The project demonstrated that when households are empowered with real-time usage visibility and fair tiered billing, significant conservation occurs organically. "
-        "From an academic and career perspective, this internship has solidified my expertise as a Full-Stack Java/Spring Boot and React developer, expanded my knowledge of FinTech and digital security, and demonstrated my ability to take a complex enterprise product from initial requirements to complete, production-ready execution.",
+        "From an academic and career perspective, this internship has solidified our expertise as Full-Stack Java/Spring Boot and React software engineers, expanded our knowledge of FinTech and digital security, and demonstrated our ability to take a complex enterprise product from initial requirements to complete, production-ready execution.",
         body
     ))
 
@@ -591,10 +672,10 @@ def build_completion_report(output_pdf_path):
     story.append(Paragraph("11. Acknowledgements", sec_heading))
     story.append(Paragraph("Thank the organization, mentor, and any team members who supported your internship journey.", sec_subprompt))
     story.append(Paragraph(
-        "I express my deepest gratitude to <b>Infosys Springboard</b> for providing this prestigious Virtual Internship 7.0 platform and fostering an environment of technical rigor, innovation, and practical learning. "
-        "I am profoundly grateful to my <b>Internship Mentors and Project Evaluators</b> whose continuous constructive feedback, technical guidance, and high architectural standards helped shape JalSetu into a robust enterprise platform. "
-        "I also thank the open-source engineering communities behind Spring Boot, React, PostgreSQL, and Tailwind CSS whose exceptional tools empowered the development of this project. "
-        "Finally, I extend my heartfelt appreciation to my academic institution and peers for their encouragement and support throughout this intensive 8-week engineering journey.",
+        "We express our deepest gratitude to <b>Infosys Springboard</b> for providing this prestigious Virtual Internship 7.0 platform and fostering an environment of technical rigor, innovation, and practical learning. "
+        "We are profoundly grateful to our <b>Internship Mentors and Project Evaluators</b> whose continuous constructive feedback, technical guidance, and high architectural standards helped shape JalSetu into a robust enterprise platform. "
+        "We also thank the open-source engineering communities behind Spring Boot, React, PostgreSQL, and Tailwind CSS whose exceptional tools empowered the development of this project. "
+        "Finally, we extend our heartfelt appreciation to our academic institutions, mentors, and fellow team members for their collaboration, encouragement, and support throughout this intensive 8-week engineering journey.",
         body
     ))
 
